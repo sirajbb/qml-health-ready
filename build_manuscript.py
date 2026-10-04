@@ -367,7 +367,7 @@ def build(all_results, complexity_data):
         "(single-qubit rotations only). All circuits used 4 qubits (PCA-reduced features). "
         "Noise evaluation: depolarizing noise p = 0.01 per gate applied to QSVM. "
         "Code and results are openly available at github.com/sirajbb/qml-health-ready "
-        "(Zenodo DOI: 10.5281/zenodo.XXXXXXX).")
+        "(Zenodo DOI: 10.5281/zenodo.23131270).")
 
     _hdr(2, "2.5 Evaluation design")
     _para(
@@ -940,7 +940,7 @@ def build(all_results, complexity_data):
         "All benchmark code, configuration files, and aggregated results (JSON) are "
         "openly available at github.com/sirajbb/qml-health-ready. A citable, "
         "version-controlled archive is deposited at Zenodo "
-        "(DOI: 10.5281/zenodo.XXXXXXX; to be updated upon publication). "
+        "(DOI: 10.5281/zenodo.23131270). "
         "The implementation uses Python 3.x, PennyLane 0.45.1, scikit-learn, "
         "and python-docx; all dependencies are listed in the repository README.")
 
