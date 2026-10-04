@@ -117,7 +117,7 @@ The eight-domain reporting checklist proposed in this paper:
 
 ## Citation
 
-> Mohammed Siraj B, Ruban S. Quantum Machine Learning in Medicine: An Evidence-Graded Critical Review and the QML-Health-READY Framework for Reporting and Translational Readiness. *Manuscript under review.* 2026. Code: github.com/siraj019/qml-health-ready
+> Mohammed Siraj B, Ruban S. Quantum Machine Learning in Medicine: An Evidence-Graded Critical Review and the QML-Health-READY Framework for Reporting and Translational Readiness. *Manuscript under review.* 2026. Code: github.com/sirajbb/qml-health-ready
 
 ---
 

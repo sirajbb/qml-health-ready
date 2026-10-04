@@ -300,7 +300,7 @@ def build(all_results, complexity_data):
         "The benchmark component follows the QML-Health-READY checklist we propose "
         "(Section 5), so that our own study can serve as a worked example. "
         "Benchmark code and all results are openly available at "
-        "github.com/siraj019/qml-health-ready "
+        "github.com/sirajbb/qml-health-ready "
         "(archived with DOI via Zenodo; see Declarations).")
 
     _hdr(2, "2.2 Evidence base: scope of included reviews")
@@ -366,7 +366,7 @@ def build(all_results, complexity_data):
         "Ablation models: QSVM and VQC with entanglement gates removed "
         "(single-qubit rotations only). All circuits used 4 qubits (PCA-reduced features). "
         "Noise evaluation: depolarizing noise p = 0.01 per gate applied to QSVM. "
-        "Code and results are openly available at github.com/siraj019/qml-health-ready "
+        "Code and results are openly available at github.com/sirajbb/qml-health-ready "
         "(Zenodo DOI: 10.5281/zenodo.XXXXXXX).")
 
     _hdr(2, "2.5 Evaluation design")
@@ -938,7 +938,7 @@ def build(all_results, complexity_data):
     _hdr(2, "Code availability")
     _para(
         "All benchmark code, configuration files, and aggregated results (JSON) are "
-        "openly available at github.com/siraj019/qml-health-ready. A citable, "
+        "openly available at github.com/sirajbb/qml-health-ready. A citable, "
         "version-controlled archive is deposited at Zenodo "
         "(DOI: 10.5281/zenodo.XXXXXXX; to be updated upon publication). "
         "The implementation uses Python 3.x, PennyLane 0.45.1, scikit-learn, "
