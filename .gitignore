@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.env
+.venv
+env/
+venv/
+
+# Data files (large, downloaded at runtime)
+*.xpt
+*.csv
+*.tsv
+*.h5
+*.hdf5
+data/
+
+# Generated outputs (reproducible from code)
+figures/*.png
+results/*.json
+results/run.log
+
+# Manuscript output
+../*.docx
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
