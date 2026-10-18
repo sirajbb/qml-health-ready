@@ -20,10 +20,17 @@ venv/
 *.hdf5
 data/
 
-# Generated outputs (reproducible from code)
-figures/*.png
-results/*.json
-results/run.log
+# Generated outputs: figures are rebuilt by build_manuscript.py
+figures/
+qml_data/
+qml_results_v*/
+
+# Results: only the reported per-split results are versioned
+results/*
+!results/benchmark_results.json
+!results/superseded/
+results/superseded/*
+!results/superseded/v2_benchmark_results.json
 
 # Manuscript output
 ../*.docx

@@ -1,12 +1,7 @@
 """
-plots.py – publication-quality figures for the paper.
-
-Figure 1: Grouped bar chart of AUC (mean ± 95% CI) for all models × datasets
-Figure 2: Noise degradation curve (AUC vs noise_prob) for QSVM
-Figure 3: QML-Health-READY domain compliance bar chart (from extraction data)
-Figure 4: Kernel target alignment: quantum vs RBF across datasets
-Figure 5: Cohen's d effect size heatmap (quantum vs best classical)
-Figure 6: Use-case triage matrix
+plots.py - figures for the manuscript. No in-image titles: numbering and
+descriptions live in the manuscript captions. Statistics are computed by
+build_manuscript.py and passed in.
 """
 
 import numpy as np
@@ -16,256 +11,220 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from pathlib import Path
 
-
-def _t_crit_95(df):
-    """Return approximate two-sided 95% t critical value (t_{df, 0.025})."""
-    # Lookup for common df values used in this benchmark
-    _TABLE = {5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
-              11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131,
-              20: 2.086, 25: 2.060, 29: 2.045, 30: 2.042}
-    if df in _TABLE:
-        return _TABLE[df]
-    # For large df, approximate with normal quantile 1.96
-    return 1.96 + 5.5 / df
-
 FIG_DIR = Path(__file__).parent / "figures"
 FIG_DIR.mkdir(exist_ok=True)
 
-PALETTE = {
-    "LR":          "#4878CF",
-    "SVM_RBF":     "#6ACC65",
-    "SVM_POLY":    "#D65F5F",
-    "RF":          "#B47CC7",
-    "GB":          "#C4AD66",
-    "QSVM":        "#77BEDB",
-    "QSVM_noisy":  "#3A7BBF",
-    "QSVM_noent":  "#AAD4E8",
-    "VQC":         "#F0A500",
-    "VQC_noent":   "#F5D07A",
+DATASETS = ["breast_cancer", "heart_disease", "diabetes",
+            "heart_failure", "tcga_brca", "nhanes_diabetes"]
+DS_SHORT = {
+    "breast_cancer": "Breast Cancer", "heart_disease": "Heart Disease",
+    "diabetes": "Pima Diabetes", "heart_failure": "Heart Failure",
+    "tcga_brca": "TCGA-BRCA", "nhanes_diabetes": "NHANES Diabetes",
 }
-
-MODEL_ORDER = ["LR","SVM_RBF","SVM_POLY","RF","GB",
-               "QSVM","QSVM_noisy","QSVM_noent","VQC","VQC_noent"]
-MODEL_LABELS = {
-    "LR":          "Logistic Regression",
-    "SVM_RBF":     "SVM (RBF kernel)",
-    "SVM_POLY":    "SVM (Poly kernel)",
-    "RF":          "Random Forest",
-    "GB":          "Gradient Boosting",
-    "QSVM":        "QSVM (ideal)",
-    "QSVM_noisy":  "QSVM (noisy, p=0.01)",
-    "QSVM_noent":  "QSVM (no entanglement)",
-    "VQC":         "VQC (ideal)",
-    "VQC_noent":   "VQC (no entanglement)",
+CLASSICAL = ["LR", "SVM_RBF", "SVM_POLY", "RF", "GB"]
+QUANTUM = ["QSVM", "QSVM_noisy", "QSVM_noent", "VQC", "VQC_noent"]
+LABEL = {
+    "LR": "Logistic regression", "SVM_RBF": "SVM (RBF)", "SVM_POLY": "SVM (polynomial)",
+    "RF": "Random forest", "GB": "Gradient boosting",
+    "QSVM": "QSVM", "QSVM_noisy": "QSVM, noisy p=0.01",
+    "QSVM_noent": "QSVM, product-state", "VQC": "VQC", "VQC_noent": "VQC, no entanglement",
 }
+C_CLASSICAL, C_QUANTUM, C_FULL = "#4C72B0", "#C44E52", "#555555"
+COMP_COLOR = {"QSVM_vs_SVM_RBF": "#2E86AB", "QSVM_vs_best": "#1B4F72", "VQC_vs_best": "#F0A500"}
+COMP_LABEL = {"QSVM_vs_SVM_RBF": "QSVM − SVM (RBF), kernel-matched",
+              "QSVM_vs_best": "QSVM − best classical",
+              "VQC_vs_best": "VQC − best classical"}
 
 
-def fig1_grouped_bar(all_results: dict, save=True):
-    """
-    all_results: {dataset_name: {model_name: aggregated_metric_dict}}
-    """
-    datasets = list(all_results.keys())
-    nd = len(datasets)
-    nm = len(MODEL_ORDER)
-    x  = np.arange(nd)
-    width = 0.08
+def _save(name):
+    path = FIG_DIR / name
+    plt.savefig(path, dpi=300, bbox_inches="tight")
+    print(f"  Saved {path}")
+    plt.close()
 
-    fig, ax = plt.subplots(figsize=(14, 5))
-    for i, m in enumerate(MODEL_ORDER):
-        means = [all_results[d].get(m, {}).get("auc", {}).get("mean", np.nan) for d in datasets]
-        cis   = [all_results[d].get(m, {}).get("auc", {}).get("ci",   np.nan) for d in datasets]
-        offset = (i - nm / 2 + 0.5) * width
-        bars = ax.bar(x + offset, means, width, label=MODEL_LABELS[m],
-                      color=PALETTE[m], yerr=cis, capsize=2, linewidth=0.5,
-                      error_kw={"linewidth": 0.8})
 
+def _clean(ax):
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+
+def fig_auroc_dots(R, best_full=None):
+    """Per-dataset dot plot of AUROC ± 95% CI; dashed line = best full-feature classical."""
+    models = CLASSICAL + QUANTUM
+    fig, axes = plt.subplots(2, 3, figsize=(12, 7.5), sharey=True)
+    y = np.arange(len(models))[::-1]
+    for ax, ds in zip(axes.ravel(), DATASETS):
+        for yi, m in zip(y, models):
+            r = R[ds][m]["auc"]
+            col = C_CLASSICAL if m in CLASSICAL else C_QUANTUM
+            ax.errorbar(r["mean"], yi, xerr=r["ci"], fmt="o", color=col, ms=4.5,
+                        capsize=2, lw=1.2)
+        if best_full and ds in best_full:
+            ax.axvline(best_full[ds], color=C_FULL, ls="--", lw=1)
+        ax.axhline(len(QUANTUM) - 0.5, color="#BBBBBB", lw=0.6)
+        ax.set_title(DS_SHORT[ds], fontsize=10)
+        ax.tick_params(axis="x", labelsize=8)
+        ax.grid(axis="x", color="#EEEEEE")
+        _clean(ax)
+    for ax in axes[:, 0]:
+        ax.set_yticks(y)
+        ax.set_yticklabels([LABEL[m] for m in models], fontsize=8.5)
+    for ax in axes[1]:
+        ax.set_xlabel("AUROC", fontsize=9)
+    handles = [mpatches.Patch(color=C_CLASSICAL, label="Classical (4 PCs)"),
+               mpatches.Patch(color=C_QUANTUM, label="Quantum (4 qubits)")]
+    if best_full:
+        handles.append(plt.Line2D([], [], color=C_FULL, ls="--",
+                                  label="Best classical, all features"))
+    fig.legend(handles=handles, loc="lower center", ncol=len(handles), fontsize=9,
+               frameon=False, bbox_to_anchor=(0.5, -0.02))
+    plt.tight_layout(rect=(0, 0.03, 1, 1))
+    _save("fig1_auroc.png")
+
+
+def fig_forest(S, margin_lines=(0.02, 0.05)):
+    """S[comp][ds] = dict(mean_diff, ci95=(lo, hi))."""
+    comps = [c for c in ["QSVM_vs_SVM_RBF", "QSVM_vs_best", "VQC_vs_best"] if c in S]
+    fig, ax = plt.subplots(figsize=(8.5, 7))
+    ax.axvspan(-margin_lines[1], margin_lines[1], color="#E8F3E8")
+    ax.axvspan(-margin_lines[0], margin_lines[0], color="#CFE8CF")
+    ax.axvline(0, color="black", lw=0.8)
+    yt, yl, yi = [], [], 0
+    for ds in DATASETS[::-1]:
+        for c in comps[::-1]:
+            s = S[c][ds]
+            ax.plot(s["ci95"], [yi, yi], color=COMP_COLOR[c], lw=2.2)
+            ax.plot(s["mean_diff"], yi, "o", color=COMP_COLOR[c], ms=5.5)
+            yi += 1
+        yt.append(yi - (len(comps) + 1) / 2)
+        yl.append(DS_SHORT[ds])
+        yi += 0.8
+    ax.set_yticks(yt)
+    ax.set_yticklabels(yl, fontsize=9.5)
+    ax.set_xlabel("Paired AUROC difference, quantum − classical (mean, corrected 95% CI)",
+                  fontsize=9.5)
+    handles = [plt.Line2D([], [], color=COMP_COLOR[c], marker="o", lw=2, label=COMP_LABEL[c])
+               for c in comps]
+    handles += [mpatches.Patch(color="#CFE8CF", label=f"±{margin_lines[0]} margin"),
+                mpatches.Patch(color="#E8F3E8", label=f"±{margin_lines[1]} margin")]
+    ax.legend(handles=handles, fontsize=8, loc="upper center", ncol=3, frameon=False,
+              bbox_to_anchor=(0.45, -0.08))
+    _clean(ax)
+    plt.tight_layout()
+    _save("fig2_paired_differences.png")
+
+
+def fig_noise(R, shot_curves=None):
+    """AUROC change relative to p = 0 on a shared axis; optional shot-count panel."""
+    ncols = 2 if shot_curves else 1
+    fig, axes = plt.subplots(1, ncols, figsize=(6 * ncols, 4.2), squeeze=False)
+    ax = axes[0, 0]
+    cmap = plt.get_cmap("tab10")
+    for k, ds in enumerate(DATASETS):
+        nc = R[ds]["__meta__"]["noise_curve"]
+        lv = list(nc.keys())
+        ax.plot(range(len(lv)), [nc[p] - nc[lv[0]] for p in lv], "o-", color=cmap(k),
+                label=DS_SHORT[ds], lw=1.5, ms=4)
+    ax.axhline(0, color="black", lw=0.7)
+    ax.set_xticks(range(len(lv)))
+    ax.set_xticklabels(lv, fontsize=8.5)
+    ax.set_xlabel("Depolarising probability per gate", fontsize=9.5)
+    ax.set_ylabel("AUROC change vs. noiseless QSVM", fontsize=9.5)
+    ax.set_title("A", loc="left", fontweight="bold")
+    ax.legend(fontsize=7.5, frameon=False)
+    _clean(ax)
+    if shot_curves:
+        ax2 = axes[0, 1]
+        for k, ds in enumerate(DATASETS):
+            sc = shot_curves[ds]
+            sv = list(sc.keys())
+            ax2.plot(range(len(sv)), [sc[s] - R[ds]["__meta__"]["noise_curve"]["0.0"] for s in sv],
+                     "o-", color=cmap(k), lw=1.5, ms=4)
+        ax2.axhline(0, color="black", lw=0.7)
+        ax2.set_xticks(range(len(sv)))
+        ax2.set_xticklabels(sv, fontsize=8.5)
+        ax2.set_xlabel("Shots per kernel entry (noiseless circuit)", fontsize=9.5)
+        ax2.set_title("B", loc="left", fontweight="bold")
+        _clean(ax2)
+    plt.tight_layout()
+    _save("fig3_noise.png")
+
+
+def fig_kernels(comp, g_key):
+    x = np.arange(len(DATASETS))
+    w = 0.27
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.2))
+    have_prod = all("KTA_product" in comp[d] for d in DATASETS)
+    series = [("KTA_quantum", "Quantum ZZ kernel", "#2E86AB")]
+    if have_prod:
+        series.append(("KTA_product", "Product-state kernel", "#9CCBE0"))
+    series.append(("KTA_rbf", "RBF kernel", "#6ACC65"))
+    for i, (k, lab, col) in enumerate(series):
+        off = (i - (len(series) - 1) / 2) * w
+        ax1.bar(x + off, [comp[d][k] for d in DATASETS], w, label=lab, color=col)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels([DS_SHORT[d] for d in DATASETS], fontsize=8, rotation=20)
+    ax1.set_ylabel("Centred kernel-target alignment", fontsize=9.5)
+    ax1.set_title("A", loc="left", fontweight="bold")
+    ax1.legend(fontsize=8, frameon=False)
+    g = [g_key(comp[d]) for d in DATASETS]
+    ax2.bar(x, g, 0.5, color="#F0A500", label="Geometric difference g (λ = 10⁻³)")
+    ax2.scatter(x, [np.sqrt(comp[d]["n_used"]) for d in DATASETS], marker="_", s=400,
+                color="black", label="Reference scale √n")
+    ax2.set_xticks(x)
+    ax2.set_xticklabels([DS_SHORT[d] for d in DATASETS], fontsize=8, rotation=20)
+    ax2.set_ylabel("g(K_C ‖ K_Q)", fontsize=9.5)
+    ax2.set_title("B", loc="left", fontweight="bold")
+    ax2.legend(fontsize=8, frameon=False)
+    for ax in (ax1, ax2):
+        _clean(ax)
+    plt.tight_layout()
+    _save("fig4_kernels.png")
+
+
+def fig_fault_ladder(R):
+    steps = [("QSVM", "Correct pipeline"), ("QSVM_fault_b1", "Bandwidth fixed at 1"),
+             ("QSVM_fault_unscaled", "+ unscaled inputs"),
+             ("QSVM_fault_v1map", "+ CZ–RZ–CZ map")]
+    cols = ["#2E86AB", "#E1A95F", "#D1675B", "#8E3B46"]
+    if "QSVM_fault_minmax" in R[DATASETS[0]]:
+        steps.append(("QSVM_fault_minmax", "Min–max [0, π], no bandwidth"))
+        cols.append("#7F7F7F")
+    x = np.arange(len(DATASETS))
+    w = 0.8 / len(steps)
+    fig, ax = plt.subplots(figsize=(11, 4.2))
+    for i, ((m, lab), col) in enumerate(zip(steps, cols)):
+        ax.bar(x + (i - (len(steps) - 1) / 2) * w, [R[d][m]["auc"]["mean"] for d in DATASETS], w,
+               yerr=[R[d][m]["auc"]["ci"] for d in DATASETS], capsize=2, color=col, label=lab)
+    ax.axhline(0.5, color="black", ls=":", lw=0.8)
     ax.set_xticks(x)
-    ax.set_xticklabels([d.replace("_", " ").title() for d in datasets], fontsize=10)
-    ax.set_ylabel("AUROC (mean ± 95 % CI)", fontsize=11)
-    ax.set_ylim(0.40, 1.05)
-    ax.axhline(0.5, color="gray", linestyle="--", linewidth=0.7, label="Random (0.50)")
-    ax.legend(loc="upper right", fontsize=7, ncol=2, framealpha=0.8)
-    ax.set_title("Figure 1. AUROC across six clinical datasets — all models", fontsize=12)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    plt.tight_layout()
-    if save:
-        path = FIG_DIR / "fig1_auc_grouped.png"
-        plt.savefig(path, dpi=200, bbox_inches="tight")
-        print(f"  Saved {path}")
-    plt.close()
-
-
-def fig2_noise_curve(noise_results: dict, save=True):
-    """
-    noise_results: {noise_prob: {dataset_name: auc_mean}}
-    """
-    fig, axes = plt.subplots(1, len(noise_results.get("datasets", [])),
-                              figsize=(12, 3.5), sharey=True)
-    datasets = noise_results.get("datasets", [])
-    noise_levels = noise_results.get("levels", [])
-    data = noise_results.get("data", {})
-
-    if not datasets:
-        plt.close(); return
-
-    for ax, ds in zip(axes, datasets):
-        qsvm_means = [data.get((p, ds, "QSVM"), np.nan) for p in noise_levels]
-        gb_means   = [data.get((p, ds, "GB"),   np.nan) for p in noise_levels]
-        ax.plot(noise_levels, qsvm_means, "o-", color=PALETTE["QSVM"],
-                label="QSVM", linewidth=1.5)
-        ax.axhline(gb_means[0] if gb_means else 0, color=PALETTE["GB"],
-                   linestyle="--", linewidth=1.2, label="GB (classical)")
-        ax.set_title(ds.replace("_", " ").title(), fontsize=9)
-        ax.set_xlabel("Depolarizing noise p", fontsize=9)
-        ax.set_ylim(0.40, 1.0)
-
-    axes[0].set_ylabel("AUROC", fontsize=10)
-    axes[0].legend(fontsize=8)
-    fig.suptitle("Figure 2. QSVM AUROC vs depolarizing noise level", fontsize=11)
-    plt.tight_layout()
-    if save:
-        path = FIG_DIR / "fig2_noise_curve.png"
-        plt.savefig(path, dpi=200, bbox_inches="tight")
-        print(f"  Saved {path}")
-    plt.close()
-
-
-def fig3_ready_compliance(compliance: dict, save=True):
-    """
-    compliance: {"domain_label": fraction_meeting_criteria, ...}
-    """
-    labels = list(compliance.keys())
-    values = [compliance[l] * 100 for l in labels]
-    colors = ["#4878CF" if v >= 50 else "#D65F5F" for v in values]
-
-    fig, ax = plt.subplots(figsize=(8, 4))
-    bars = ax.barh(labels, values, color=colors, edgecolor="white", height=0.6)
-    ax.axvline(50, color="gray", linestyle="--", linewidth=0.8)
-    for bar, v in zip(bars, values):
-        ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height() / 2,
-                f"{v:.0f}%", va="center", fontsize=9)
-    ax.set_xlim(0, 115)
-    ax.set_xlabel("Studies meeting criterion (%)", fontsize=10)
-    ax.set_title("Figure 3. QML-Health-READY domain compliance in included studies",
-                 fontsize=11)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    plt.tight_layout()
-    if save:
-        path = FIG_DIR / "fig3_ready_compliance.png"
-        plt.savefig(path, dpi=200, bbox_inches="tight")
-        print(f"  Saved {path}")
-    plt.close()
-
-
-def fig4_kernel_alignment(complexity_data: dict, save=True):
-    """
-    complexity_data: {dataset_name: complexity_dict}
-    """
-    datasets  = list(complexity_data.keys())
-    ka_q  = [complexity_data[d].get("KA_quantum", np.nan) for d in datasets]
-    ka_c  = [complexity_data[d].get("KA_rbf",     np.nan) for d in datasets]
-    gd    = [complexity_data[d].get("geom_diff_sq", np.nan) for d in datasets]
-    x = np.arange(len(datasets))
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))
-    w = 0.35
-    ax1.bar(x - w/2, ka_q, w, label="Quantum kernel KA", color=PALETTE["QSVM"])
-    ax1.bar(x + w/2, ka_c, w, label="RBF kernel KA",    color=PALETTE["SVM_RBF"])
-    ax1.set_xticks(x); ax1.set_xticklabels([d.replace("_", " ").title() for d in datasets], fontsize=9)
-    ax1.set_ylabel("Kernel-target alignment", fontsize=10)
-    ax1.set_title("Kernel alignment", fontsize=10)
-    ax1.legend(fontsize=8)
-    ax1.spines["top"].set_visible(False); ax1.spines["right"].set_visible(False)
-
-    ax2.bar(x, gd, color=PALETTE["VQC"])
-    ax2.set_xticks(x); ax2.set_xticklabels([d.replace("_", " ").title() for d in datasets], fontsize=9)
-    ax2.set_ylabel("Geometric difference s(K_Q, K_C)", fontsize=10)
-    ax2.set_title("Quantum–classical kernel divergence", fontsize=10)
-    ax2.spines["top"].set_visible(False); ax2.spines["right"].set_visible(False)
-
-    fig.suptitle("Figure 4. Data complexity: kernel alignment and geometric difference", fontsize=11)
-    plt.tight_layout()
-    if save:
-        path = FIG_DIR / "fig4_kernel_alignment.png"
-        plt.savefig(path, dpi=200, bbox_inches="tight")
-        print(f"  Saved {path}")
-    plt.close()
-
-
-def fig5_cohens_d_heatmap(all_results: dict, save=True):
-    """Approximate Cohen's d: quantum models vs best classical per dataset."""
-    DATASETS = ["breast_cancer", "heart_disease", "diabetes",
-                "heart_failure", "tcga_brca", "nhanes_diabetes"]
-    DS_SHORT = {
-        "breast_cancer":   "BC\nWisconsin",
-        "heart_disease":   "Heart\nDisease",
-        "diabetes":        "Pima\nDiabetes",
-        "heart_failure":   "Heart\nFailure",
-        "tcga_brca":       "TCGA-\nBRCA",
-        "nhanes_diabetes": "NHANES\nDiabetes",
-    }
-    Q_MODELS = ["QSVM", "VQC"]
-    Q_LABELS = {"QSVM": "QSVM (ideal)", "VQC": "VQC (ideal)"}
-    # n_obs: breast_cancer medium mode (5×3=15), rest fast (3×2=6)
-    N_OBS = {"breast_cancer": 15, "heart_disease": 6, "diabetes": 6,
-             "heart_failure": 6, "tcga_brca": 6, "nhanes_diabetes": 6}
-
-    matrix = np.full((len(Q_MODELS), len(DATASETS)), np.nan)
-
-    for j, ds in enumerate(DATASETS):
-        n = N_OBS[ds]
-        t_crit = _t_crit_95(n - 1)
-        # best classical (among non-quantum)
-        best_c_mean, best_c_ci = -1.0, np.nan
-        for m in ["LR", "SVM_RBF", "RF", "GB"]:
-            v = all_results.get(ds, {}).get(m, {}).get("auc", {}).get("mean", -1.0)
-            if v > best_c_mean:
-                best_c_mean = v
-                best_c_ci = all_results.get(ds, {}).get(m, {}).get("auc", {}).get("ci", np.nan)
-        std_c = (best_c_ci * np.sqrt(n) / t_crit) if not np.isnan(best_c_ci) else np.nan
-        for i, qm in enumerate(Q_MODELS):
-            q_mean = all_results.get(ds, {}).get(qm, {}).get("auc", {}).get("mean", np.nan)
-            q_ci   = all_results.get(ds, {}).get(qm, {}).get("auc", {}).get("ci",   np.nan)
-            if np.isnan(q_mean) or np.isnan(std_c):
-                continue
-            std_q = (q_ci * np.sqrt(n) / t_crit) if not np.isnan(q_ci) else std_c
-            pooled = np.sqrt((std_c ** 2 + std_q ** 2) / 2.0)
-            if pooled > 0:
-                matrix[i, j] = (q_mean - best_c_mean) / pooled
-
-    fig, ax = plt.subplots(figsize=(10, 3.2))
-    vmax = max(0.5, np.nanmax(np.abs(matrix)))
-    im = ax.imshow(matrix, cmap="RdYlGn", vmin=-vmax, vmax=vmax, aspect="auto")
-
-    ax.set_xticks(range(len(DATASETS)))
     ax.set_xticklabels([DS_SHORT[d] for d in DATASETS], fontsize=9)
-    ax.set_yticks(range(len(Q_MODELS)))
-    ax.set_yticklabels([Q_LABELS[m] for m in Q_MODELS], fontsize=10)
-
-    for i in range(len(Q_MODELS)):
-        for j in range(len(DATASETS)):
-            v = matrix[i, j]
-            if not np.isnan(v):
-                col = "white" if abs(v) > 0.6 * vmax else "black"
-                ax.text(j, i, f"{v:.2f}", ha="center", va="center",
-                        fontsize=9, color=col)
-
-    cbar = plt.colorbar(im, ax=ax)
-    cbar.set_label("Cohen's d  (quantum − classical; negative = quantum worse)", fontsize=8)
-    ax.set_title("Figure 5. Effect size: quantum vs best classical AUROC (approximate Cohen's d)",
-                 fontsize=10)
+    ax.set_ylabel("QSVM AUROC (mean ± 95% CI)", fontsize=9.5)
+    ax.set_ylim(0.3, 1.02)
+    ax.legend(fontsize=8, ncol=len(steps), frameon=False, loc="upper center",
+              bbox_to_anchor=(0.5, 1.12))
+    _clean(ax)
     plt.tight_layout()
-    if save:
-        path = FIG_DIR / "fig5_cohens_d_heatmap.png"
-        plt.savefig(path, dpi=200, bbox_inches="tight")
-        print(f"  Saved {path}")
-    plt.close()
+    _save("fig5_fault_ladder.png")
 
 
-def fig6_triage_matrix(save=True):
-    """Visual use-case triage matrix for QML in clinical applications."""
+def fig_qubit_scaling(R, datasets):
+    fig, axes = plt.subplots(1, len(datasets), figsize=(5.5 * len(datasets), 3.8), squeeze=False)
+    for ax, ds in zip(axes[0], datasets):
+        sc = R[ds]["__meta__"]["qubit_scaling"]
+        q = list(sc.keys())
+        ax.plot(q, [sc[k]["qsvm_auc"] for k in q], "o-", color="#2E86AB", label="QSVM (tuned bandwidth)")
+        ax.plot(q, [sc[k]["svm_rbf_auc"] for k in q], "s--", color="#6ACC65", label="SVM (RBF)")
+        ax.set_xlabel("Qubits = principal components", fontsize=9)
+        ax.set_ylabel("AUROC (first-seed folds)", fontsize=9)
+        ax.set_title(DS_SHORT[ds], fontsize=10)
+        ax.legend(fontsize=8, frameon=False)
+        _clean(ax)
+    plt.tight_layout()
+    _save("figS2_qubit_scaling.png")
+
+
+def fig_triage():
     use_cases = [
         "Molecular simulation\n& drug discovery",
         "High-dim omics\n(proteomics, metabolomics)",
@@ -276,86 +235,22 @@ def fig6_triage_matrix(save=True):
     ]
     dimensions = ["Theoretical\nbasis", "Data-loading\nfeasibility",
                   "NISQ hardware\nreadiness", "Plausibility\nof benefit"]
-    # 1 = Low, 2 = Moderate, 3 = High
-    scores = np.array([
-        [3, 3, 1, 3],   # Molecular sim — strong theory, feasible loading, needs FT HW
-        [2, 2, 2, 2],   # Omics — possible theory, manageable at small n
-        [2, 3, 1, 2],   # Combinatorial — QUBO formulation, QAOA needs deep circuits
-        [2, 2, 2, 1],   # Neuro/mental-health — leakage/overfitting risk high
-        [1, 2, 3, 1],   # Routine tabular — GB too strong, QML overhead high
-        [1, 1, 2, 1],   # Medical imaging — heavy compression kills advantage
-    ])
-
+    scores = np.array([[3, 3, 1, 3], [2, 2, 2, 2], [2, 3, 1, 2],
+                       [2, 2, 2, 1], [1, 2, 3, 1], [1, 1, 2, 1]])
     fig, ax = plt.subplots(figsize=(9, 6))
-    cmap = matplotlib.colormaps.get_cmap("RdYlGn").resampled(3)
-    im = ax.imshow(scores, cmap=cmap, vmin=0.5, vmax=3.5, aspect="auto")
-
+    cmap = matplotlib.colormaps["RdYlGn"].resampled(3)
+    ax.imshow(scores, cmap=cmap, vmin=0.5, vmax=3.5, aspect="auto")
     ax.set_xticks(range(len(dimensions)))
     ax.set_xticklabels(dimensions, fontsize=9)
     ax.set_yticks(range(len(use_cases)))
     ax.set_yticklabels(use_cases, fontsize=9)
-
     label_map = {1: "Low", 2: "Moderate", 3: "High"}
     for i in range(len(use_cases)):
         for j in range(len(dimensions)):
-            v = scores[i, j]
-            col = "black"
-            ax.text(j, i, label_map[v], ha="center", va="center",
-                    fontsize=8.5, color=col, fontweight="bold")
-
-    patches = [
-        mpatches.Patch(color=cmap(0), label="Low"),
-        mpatches.Patch(color=cmap(1), label="Moderate"),
-        mpatches.Patch(color=cmap(2), label="High"),
-    ]
-    ax.legend(handles=patches, loc="upper right", fontsize=8,
-              bbox_to_anchor=(1.22, 1.0), title="Rating")
-    ax.set_title("Figure 6. QML use-case triage: plausibility of quantum advantage by clinical application",
-                 fontsize=10)
+            ax.text(j, i, label_map[scores[i, j]], ha="center", va="center",
+                    fontsize=8.5, fontweight="bold")
+    ax.legend(handles=[mpatches.Patch(color=cmap(k), label=l)
+                       for k, l in enumerate(["Low", "Moderate", "High"])],
+              loc="upper right", fontsize=8, bbox_to_anchor=(1.22, 1.0), title="Rating")
     plt.tight_layout()
-    if save:
-        path = FIG_DIR / "fig6_triage_matrix.png"
-        plt.savefig(path, dpi=200, bbox_inches="tight")
-        print(f"  Saved {path}")
-    plt.close()
-
-
-def fig3_ready_compliance_illustrative(save=True):
-    """
-    Illustrative QML-Health-READY domain compliance chart.
-    Estimates based on Gupta et al. 2025 (n=16 included studies).
-    """
-    compliance = {
-        "R – Rationale (data complexity)":         0.12,
-        "E – Encoding details reported":            0.56,
-        "A – Algorithm (≥4 tuned baselines)":       0.25,
-        "D – Dataset quality (real clinical data)": 0.31,
-        "Y – Yield (95% CI, multiple seeds)":       0.06,
-        "R – Robustness to noise":                  0.19,
-        "E – External evaluation / validation":     0.13,
-        "Y – Yardstick (compute cost reported)":    0.19,
-    }
-    labels = list(compliance.keys())
-    values = [compliance[l] * 100 for l in labels]
-    colors = ["#4878CF" if v >= 50 else "#D65F5F" for v in values]
-
-    fig, ax = plt.subplots(figsize=(8, 4.5))
-    bars = ax.barh(labels, values, color=colors, edgecolor="white", height=0.6)
-    ax.axvline(50, color="gray", linestyle="--", linewidth=0.8, label="50% threshold")
-    for bar, v in zip(bars, values):
-        ax.text(bar.get_width() + 1.5, bar.get_y() + bar.get_height() / 2,
-                f"{v:.0f}%", va="center", fontsize=9)
-    ax.set_xlim(0, 115)
-    ax.set_xlabel("Studies meeting criterion (%, illustrative)", fontsize=10)
-    ax.set_title("Figure 3. QML-Health-READY domain compliance\n"
-                 "(illustrative estimates based on Gupta et al. 2025 review, n≈16 studies)",
-                 fontsize=10)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.legend(fontsize=8, loc="lower right")
-    plt.tight_layout()
-    if save:
-        path = FIG_DIR / "fig3_ready_compliance.png"
-        plt.savefig(path, dpi=200, bbox_inches="tight")
-        print(f"  Saved {path}")
-    plt.close()
+    _save("figS1_triage.png")

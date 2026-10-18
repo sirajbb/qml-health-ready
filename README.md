@@ -1,133 +1,59 @@
-# QML-Health-READY Benchmark
+# QML-Health-READY benchmark
 
-**Reproducible benchmark code for:**  
-*Quantum Machine Learning in Medicine: An Evidence-Graded Critical Review and the QML-Health-READY Framework for Reporting and Translational Readiness*  
-Mohammed Siraj B, Ruban S — St Aloysius (Deemed to be University), Mangalore, India
+Code and per-split results for:
 
----
+> Mohammed Siraj B, Ruban S. *Matched but Not Better: An Equivalence-Tested Benchmark of
+> Quantum Machine Learning on Six Clinical Datasets and the QML-Health-READY Reporting
+> Framework.* Manuscript under review, 2026.
 
-## Overview
+A quantum-kernel SVM (4-qubit ZZ feature map, tuned bandwidth) and a variational quantum
+classifier are compared with five tuned classical models on six public clinical datasets,
+using identical four-component inputs and 25 identical cross-validation splits, corrected
+paired t-tests and equivalence tests. Additional analyses cover entanglement ablation,
+depolarising noise, finite-shot kernel estimation, a kernel-matched classical comparator,
+classical models on all predictors, implementation faults and qubit scaling (4/8/12 qubits).
 
-This repository contains the complete benchmark pipeline comparing quantum machine learning (QML) models against tuned classical baselines on six clinical datasets spanning four medical domains.
+## Repository layout
 
-**Key finding:** No statistically significant quantum advantage was observed on any dataset after Bonferroni correction (α* = 0.0083). Depolarising noise at p = 0.01 produced results indistinguishable from ideal simulation on all datasets, consistent with noise-induced barren-plateau saturation.
+| Path | Contents |
+|---|---|
+| `benchmark_colab_v3.py` | The full benchmark as one script (runs in Google Colab or locally) |
+| `build_manuscript.py`, `plots.py` | Rebuild the paper's tables, figures and statistics from the results file |
+| `results/benchmark_results.json` | Per-split metrics for every model, dataset and analysis reported in the paper |
+| `results/superseded/` | Results of the superseded version 2 (not reported) |
+| `legacy_v1/`, `legacy_v2/` | Earlier code, kept for transparency; see the README in each folder |
 
----
-
-## Datasets
-
-| Dataset | Domain | n | Features | Source |
-|---|---|---|---|---|
-| Breast Cancer Wisconsin | Oncology | 569 | 30 | scikit-learn / UCI |
-| Heart Disease Cleveland | Cardiology | 297 | 13 | UCI ML Repository |
-| Pima Indians Diabetes | Metabolic | 768 | 8 | UCI ML Repository |
-| Heart Failure Clinical Records | Cardiology | 299 | 12 | UCI ML Repository |
-| TCGA-BRCA ER Status | Genomic oncology | 780 | 200 | UCSC Xena S3 |
-| NHANES Diabetes 2017–18 | Population epidemiology | 2000 | 7 | CDC public XPT |
-
-All datasets are publicly available with no restrictions on research use. See `datasets.py` for download logic.
-
----
-
-## Models benchmarked
-
-**Classical baselines:** Logistic Regression (L2), SVM-RBF, SVM-Poly, Random Forest, Gradient Boosting  
-**Quantum models:** QSVM (ZZ-FeatureMap kernel), VQC (AngleEmbedding + StronglyEntanglingLayers)  
-**Ablations:** Entanglement-removed variants of QSVM and VQC  
-**Noise:** Depolarising noise p = 0.01 per gate applied to QSVM
-
----
-
-## Installation
+## Reproducing the results
 
 ```bash
 pip install -r requirements.txt
+python benchmark_colab_v3.py                      # full run, about 5-6 h on a Colab CPU
+QML_MODE=patch python benchmark_colab_v3.py       # adds the v3b analyses to an existing results file
+QML_FAST=1 python benchmark_colab_v3.py           # quick smoke test (not for reporting)
 ```
 
-Python 3.9+ recommended.
+Datasets are downloaded at run time from the UCI repository, UCSC Xena (TCGA-BRCA) and CDC
+NHANES; a failed download stops the run rather than substituting synthetic data. Results are
+written to `qml_results_v3/benchmark_results.json` after each dataset, so an interrupted run
+resumes where it stopped.
 
----
+To rebuild the manuscript and supplement from the results file:
 
-## Usage
-
-### Fast run (< 10 min, for testing)
 ```bash
-python run_benchmark.py --fast
-```
-
-### Full run (publishable quality, ~2–4 h)
-```bash
-python run_benchmark.py
-```
-
-### Regenerate manuscript figures and Word document only
-```bash
-python run_benchmark.py --load   # reloads saved results
 python build_manuscript.py
 ```
 
-Outputs:
-- `results/benchmark_results.json` — all AUROC, CI, Wilcoxon results
-- `results/complexity_results.json` — KTA, geometric difference, Fisher ratio
-- `figures/fig1_auc_grouped.png` — grouped bar chart
-- `figures/fig2_noise_curve.png` — noise degradation curves
-- `figures/fig3_ready_compliance.png` — QML-Health-READY compliance illustration
-- `figures/fig4_kernel_alignment.png` — kernel-target alignment comparison
-- `figures/fig5_cohens_d_heatmap.png` — Cohen's d effect size heatmap
-- `figures/fig6_triage_matrix.png` — use-case triage matrix
+The builder recomputes all statistics (corrected resampled t-test, equivalence tests at
+±0.01/0.02/0.05 AUROC, Holm adjustment) from the per-split values and does not require SciPy.
 
----
+## Version history
 
-## Repository structure
-
-```
-benchmark/
-├── config.py             # Global constants (seeds, qubit count, CV folds, grids)
-├── datasets.py           # Dataset loaders (auto-downloads TCGA-BRCA, NHANES)
-├── quantum_models.py     # QSVM and VQC implementations (PennyLane)
-├── evaluate.py           # Nested CV, Wilcoxon test, confidence intervals
-├── complexity.py         # KTA, geometric difference, Fisher ratio
-├── plots.py              # All 6 figure generators
-├── run_benchmark.py      # Main runner
-├── build_manuscript.py   # Generates Word manuscript from results JSON
-└── results/              # JSON output (generated at runtime)
-└── figures/              # PNG figures (generated at runtime)
-```
-
----
-
-## QML-Health-READY Framework
-
-The eight-domain reporting checklist proposed in this paper:
-
-| Domain | Name | Description |
+| Version | Status | Notes |
 |---|---|---|
-| R† | Rationale | Theoretical basis + data-complexity analysis (KTA, geometric difference) |
-| E† | Encoding | Encoding type, qubit count, PCA fitted inside folds |
-| A† | Algorithm & baselines | ≥4 tuned classical baselines + entanglement-ablated quantum model |
-| D† | Data & splits | Provenance, class balance, subject-level splitting, leakage checks |
-| Y† | Yield (uncertainty) | Nested CV, ≥5 seeds, 95% CI, paired statistical test |
-| R† | Robustness to noise | Hardware-calibrated noise model evaluation |
-| E | Evaluation in context | Calibration, decision-curve analysis, TRIPOD+AI / CLAIM alignment |
-| Y | Yardstick for cost | Wall-clock time, circuit evaluations vs classical baselines |
+| 1 | Withdrawn | Implementation faults; see `legacy_v1/README.md` |
+| 2 | Superseded | Corrected pipeline; see `legacy_v2/README.md` |
+| 3 | Reported | Current code; analysis changes are listed in Supplementary Table S8 |
 
-† = Core item. A study meeting all Core items is **READY-Reportable**.
+## Licence
 
----
-
-## Citation
-
-> Mohammed Siraj B, Ruban S. Quantum Machine Learning in Medicine: An Evidence-Graded Critical Review and the QML-Health-READY Framework for Reporting and Translational Readiness. *Manuscript under review.* 2026. Code: github.com/sirajbb/qml-health-ready
-
----
-
-## License
-
-MIT License. See `LICENSE`.
-
----
-
-## Acknowledgements
-
-Datasets: UCI Machine Learning Repository, UCSC Xena (TCGA-BRCA), CDC NHANES.  
-Quantum simulation: PennyLane (Xanadu).
+MIT. See `LICENSE`.
