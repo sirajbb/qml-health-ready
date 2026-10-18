@@ -94,9 +94,9 @@ CLASSICAL = ["LR", "SVM_RBF", "SVM_POLY", "RF", "GB"]
 MODELS = CLASSICAL + ["QSVM", "QSVM_noisy", "QSVM_noent", "VQC", "VQC_noent"]
 ML = {"LR": "Logistic regression", "SVM_RBF": "SVM (RBF)", "SVM_POLY": "SVM (polynomial)",
       "RF": "Random forest", "GB": "Gradient boosting", "QSVM": "QSVM",
-      "QSVM_noisy": "QSVM, noisy (p = 0.01)", "QSVM_noent": "QSVM, product-state kernel",
-      "VQC": "VQC", "VQC_noent": "VQC, no entanglement",
-      "QSVM_noisy_shots": "QSVM, noisy + 1,024 shots"}
+      "QSVM_noisy": "QSVM (noisy, p = 0.01)", "QSVM_noent": "QSVM (product-state kernel)",
+      "VQC": "VQC", "VQC_noent": "VQC (no entanglement)",
+      "QSVM_noisy_shots": "QSVM (noisy + 1,024 shots)"}
 MARGINS = [0.01, 0.02, 0.05]
 
 REFS = {
@@ -111,12 +111,12 @@ REFS = {
     "biamonte": "Biamonte J, Wittek P, Pancotti N, Rebentrost P, Wiebe N, Lloyd S. Quantum machine learning. Nature. 2017;549(7671):195-202. doi:10.1038/nature23474.",
     "ciliberto": "Ciliberto C, Herbster M, Ialongo AD, Pontil M, Rocchetto A, Severini S, Wossnig L. Quantum machine learning: a classical perspective. Proc R Soc A. 2018;474(2209):20170551. doi:10.1098/rspa.2017.0551.",
     "gupta": "Gupta RS, Wood CE, Engstrom T, Pole JD, Shrapnel S. A systematic review of quantum machine learning for digital health. npj Digit Med. 2025;8:237. doi:10.1038/s41746-025-01597-z.",
-    "bowles": "Bowles J, Ahmed S, Schuld M. Better than classical? The subtle art of benchmarking quantum machine learning models. arXiv preprint arXiv:2403.07059. 2024.",
+    "bowles": "Bowles J, Ahmed S, Schuld M. Better than classical? The subtle art of benchmarking quantum machine learning models. arXiv preprint arXiv:2403.07059. 2024. doi:10.48550/arXiv.2403.07059.",
     "dunjko": "Dunjko V, Briegel HJ. Machine learning & artificial intelligence in the quantum domain: a review and a roadmap. Rep Prog Phys. 2018;81(7):074001. doi:10.1088/1361-6633/aab406.",
     "tang": "Tang E. A quantum-inspired classical algorithm for recommendation systems. In: Proc 51st Annual ACM Symposium on Theory of Computing (STOC 2019). New York: ACM; 2019. p. 217-228. doi:10.1145/3313276.3316310.",
-    "sahebi": "Sahebi M, Barthe A, Suzuki Y, Holmes Z, Grossi M. On dequantization of supervised quantum machine learning via random Fourier features. arXiv preprint arXiv:2505.15902. 2025.",
-    "kakavand": "Kakavand S, Strohmeyer C, Schlotter M. Benchmarking quantum kernel support vector machines against classical baselines on tabular data: a rigorous empirical study with hardware validation. arXiv preprint arXiv:2604.18837. 2026.",
-    "leither": "Leither S, Lubinski T, Kubal M, Johri S. Benchmarking quantum and classical machine learning models on oncological data. arXiv preprint arXiv:2608.11373. 2026.",
+    "sahebi": "Sahebi M, Barthe A, Suzuki Y, Holmes Z, Grossi M. On dequantization of supervised quantum machine learning via random Fourier features. arXiv preprint arXiv:2505.15902. 2025. doi:10.48550/arXiv.2505.15902.",
+    "kakavand": "Kakavand S, Strohmeyer C, Schlotter M. Benchmarking quantum kernel support vector machines against classical baselines on tabular data: a rigorous empirical study with hardware validation. arXiv preprint arXiv:2604.18837. 2026. doi:10.48550/arXiv.2604.18837.",
+    "leither": "Leither S, Lubinski T, Kubal M, Johri S. Benchmarking quantum and classical machine learning models on oncological data. arXiv preprint arXiv:2608.11373. 2026. doi:10.48550/arXiv.2608.11373.",
     "schnabel": "Schnabel J, Roth M. Quantum kernel methods under scrutiny: a benchmarking study. Quantum Mach Intell. 2025;7(1):58. doi:10.1007/s42484-025-00273-5.",
     "liu_hw": "Liu H, Zhang Z, Zheng K, Liang Z, Chen CS, Carothers C, Hahn J. Quantum machine learning for biomedical classification problems: a feasibility study on real quantum hardware. Ann Biomed Eng. 2026. doi:10.1007/s10439-026-04204-8.",
     "priyadharshini": "Priyadharshini M, Raju BD, Banu AF, Kumar PJ, Murugesh V, Rybin O. A quantum machine learning framework for predicting drug sensitivity in multiple myeloma using proteomic data. Sci Rep. 2025;15(1):26553. doi:10.1038/s41598-025-06544-2.",
@@ -125,7 +125,7 @@ REFS = {
     "shaydulin": "Shaydulin R, Wild SM. Importance of kernel bandwidth in quantum machine learning. Phys Rev A. 2022;106(4):042407. doi:10.1103/PhysRevA.106.042407.",
     "canatar": "Canatar A, Peters E, Pehlevan C, Wild SM, Shaydulin R. Bandwidth enables generalization in quantum kernel models. Trans Mach Learn Res. 2023. arXiv:2206.06686.",
     "florez": "Flórez-Ablan R, Roth M, Schnabel J. On the similarity of bandwidth-tuned quantum kernels and classical kernels. Quantum Sci Technol. 2025;10(3):035051. doi:10.1088/2058-9565/ade7ad.",
-    "miroszewski": "Miroszewski A, Fellous Asiani M, Mielczarek J, Le Saux B, Nalepa J. In search of quantum advantage: estimating the number of shots in quantum kernel methods. arXiv preprint arXiv:2407.15776. 2024.",
+    "miroszewski": "Miroszewski A, Fellous Asiani M, Mielczarek J, Le Saux B, Nalepa J. In search of quantum advantage: estimating the number of shots in quantum kernel methods. arXiv preprint arXiv:2407.15776. 2024. doi:10.48550/arXiv.2407.15776.",
     "kubler": "Kübler J, Buchholz S, Schölkopf B. The inductive bias of quantum kernels. Adv Neural Inf Process Syst. 2021;34:12661-12673.",
     "tripod": "Collins GS, Moons KGM, Dhiman P, Wynants L, Myint PK, Majeed A, et al. TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods. BMJ. 2024;385:e078378. doi:10.1136/bmj-2023-078378.",
     "claim": "Mongan J, Moy L, Kahn CE Jr. Checklist for Artificial Intelligence in Medical Imaging (CLAIM): a guide for authors and reviewers. Radiol Artif Intell. 2020;2(2):e200029. doi:10.1148/ryai.2020200029.",
@@ -214,6 +214,16 @@ def _d(x, nd=3):
 
 def _p(p):
     return "<0.001" if p < 0.001 else f"{p:.3f}"
+
+
+def _of6(n):
+    return {0: "none of the six datasets", 6: "all six datasets"}.get(n, f"{n} of 6 datasets")
+
+
+def _sci(x):
+    m, e = f"{x:.1e}".split("e")
+    sup = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
+    return f"{m} × 10{str(int(e)).translate(sup)}"
 
 
 def _pct(x):
@@ -454,45 +464,59 @@ def build(R):
     # ---------------- abstract (<= 250 words)
     D.h(1, "Abstract")
     abstract = [
-        ("Background: ", "Quantum machine learning (QML) is proposed for clinical prediction, but "
-         "comparisons with classical models are small, rarely paired, and sensitive to "
-         "implementation choices."),
+        ("Background: ", "Quantum machine learning (QML) is promoted for clinical prediction, but "
+         "comparisons with classical models are rarely paired, seldom test equivalence, and depend "
+         "on rarely reported implementation choices."),
         ("Methods: ", f"On six public clinical datasets we compared a quantum-kernel support vector "
-         f"machine (QSVM; 4-qubit ZZ feature map, tuned bandwidth) and a variational quantum "
-         f"classifier (VQC) with five tuned classical models. All models received identical "
-         f"four-component inputs and {J} identical cross-validation splits. We tested paired AUROC "
-         f"differences with a corrected resampled t-test and equivalence tests (margins ±0.02 "
-         f"and ±0.05), Holm-adjusted, and ran entanglement, noise"
-         f"{', finite-shot' if v3 else ''} and kernel-similarity analyses. We also propose "
-         f"QML-Health-READY, an eight-domain reporting framework."),
+         f"machine (QSVM; 4-qubit ZZ feature map with tuned bandwidth) and a variational quantum "
+         f"classifier (VQC) with five tuned classical models, using identical four-component inputs "
+         f"and {J} identical cross-validation splits. Paired differences in the area under the ROC "
+         f"curve (AUROC) were assessed with a corrected resampled t-test and Holm-adjusted "
+         f"equivalence tests (margins ±0.02 and ±0.05). Entanglement-ablation, noise"
+         f"{', finite-shot, implementation-fault' if v3 else ''} and kernel-similarity analyses "
+         f"followed. We also propose QML-Health-READY, an eight-domain reporting framework."),
         ("Results: ", (f"No quantum model significantly outperformed a classical comparator. "
                        if not better else "") +
-         f"Against the kernel-matched RBF SVM, QSVM was equivalent within ±0.05 on "
+         f"Against the kernel-matched radial basis function (RBF) SVM, QSVM was equivalent within ±0.05 on "
          f"{len(mt_eq05)} of 6 datasets and within ±0.02 on {len(mt_eq02)}"
          + (f"; against the best classical model it was significantly worse on "
             f"{_names(qb_worse)} ({_d(S['QSVM_vs_best'][qb_worse[0]]['mean_diff'])})" if qb_worse else "") +
          f". VQC was equivalent to the best classical model within ±0.05 on {len(vb_eq05)} of 6. "
          + ("No comparison was equivalent within ±0.01. " if not eq01_any else "") +
          f"A classically trivial product-state kernel came within 0.01 AUROC of the best "
-         f"classical model on {len(prod_close)} of 6 datasets, and tuned bandwidths were small "
-         + (f"({_pct(frac_le02)} ≤ 0.02)" if bw_min < 0.02 else
-            f"({_pct(frac_min)} at the grid minimum, {bw_min})") + "."
-         + (f" Estimating kernel entries from 1,024 shots lowered QSVM AUROC by "
-            f"{min(shot_pen.values()):.2f}–{max(shot_pen.values()):.2f}; an untuned bandwidth "
+         f"classical model on {len(prod_close)} of 6 datasets."
+         + (f" With p = 0.01 depolarising noise and 1,024 shots per kernel entry, QSVM AUROC fell "
+            f"by {min(shot_pen.values()):.2f}–{max(shot_pen.values()):.2f}; an untuned bandwidth "
             f"gave near-chance AUROC "
             f"({min(R[d]['QSVM_fault_b1']['auc']['mean'] for d in DATASETS):.2f}–"
             f"{max(R[d]['QSVM_fault_b1']['auc']['mean'] for d in DATASETS):.2f})."
             if v3 else "")),
         ("Conclusions: ", "Correctly configured quantum classifiers approached, but did not exceed, "
-         "tuned classical models, and implementation errors alone can reverse the conclusion. "
+         "tuned classical models"
+         + ("; finite-shot estimation, not gate noise, was their main practical cost, and "
+            "configuration errors alone could reverse the conclusion. " if v3 else
+            ", and implementation errors alone can reverse the conclusion. ") +
          "QML-Health-READY specifies the reporting needed to make such claims credible."),
     ]
+    highlights = [
+        "Quantum classifiers matched, but never beat, tuned classical models on clinical data",
+        f"QSVM matched an RBF SVM within ±0.05 AUROC on {len(mt_eq05)} of 6 clinical datasets",
+        "A classically trivial product-state kernel performed as well as the entangled one",
+    ] + ([
+        "Finite measurement shots, not gate noise, were the binding cost for quantum kernels",
+        "Configuration faults alone turned parity into near-chance quantum performance",
+    ] if v3 else [])
+    assert all(len(h) <= 85 for h in highlights), [h for h in highlights if len(h) > 85]
     words = 0
     for pre, txt in abstract:
         D.p(txt, bold_prefix=pre)
         words += len(txt.split())
+    assert words <= 250, f"abstract has {words} words (limit 250)"
     D.p("quantum machine learning; quantum kernel; equivalence testing; benchmarking; "
         "reporting guideline; clinical prediction", bold_prefix="Keywords: ")
+    D.h(1, "Highlights")
+    for h in highlights:
+        D.bullet(h)
 
     # ---------------- 1 Introduction
     D.h(1, "1. Introduction")
@@ -502,7 +526,10 @@ def build(R):
         "serves as a feature map or kernel [@havlicek;@schuld_killoran;@schuld_book]. The "
         "quantum support vector machine (QSVM) was proposed with a logarithmic-runtime claim "
         "[@rebentrost], and the exponentially large Hilbert space has been argued to offer "
-        "expressive power unavailable to classical models [@biamonte;@ciliberto].")
+        "expressive power unavailable to classical models [@biamonte;@ciliberto]. For clinical "
+        "prediction the question is practical: whether a quantum model discriminates better than "
+        "a well-tuned classical one, at a cost a health system could bear. Overstated claims can "
+        "divert research effort and funding from methods that already work.")
     D.p("The evidence has not followed. A 2025 systematic review identified 4,915 records "
         "(2015 to June 2024), evaluated 46 studies of QML for digital health in detail after "
         "excluding many for insufficient rigour, found that only 16 tested algorithms under "
@@ -647,11 +674,13 @@ def build(R):
     D.h(2, "4.2 Models")
     D.p(f"Within each outer training fold we fitted"
         + (" median imputation," if v3 else "") +
-        f" standardisation, PCA to {cfg['n_qubits']} components and re-standardisation of the "
+        f" standardisation, principal component analysis (PCA) to {cfg['n_qubits']} components "
+        f"and re-standardisation of the "
         f"components; all models received exactly these four inputs"
         + (", and the classical models were additionally fitted on all standardised predictors "
            "to quantify the cost of the reduction" if v3 else "") +
-        ". Classical models (L2 logistic regression, RBF and polynomial SVMs, random forest, "
+        ". Classical models (L2 logistic regression, support vector machines (SVMs) with radial "
+        "basis function (RBF) and polynomial kernels, random forest, "
         "gradient boosting) were tuned by 3-fold inner grid search on AUROC [@sklearn] "
         "(grids in Supplementary Table S5).")
     D.p(f"The QSVM uses the ZZ feature map [@havlicek] with {cfg['zz_reps']} repetitions on a "
@@ -701,7 +730,8 @@ def build(R):
 
     D.h(2, "4.3 Statistical analysis")
     D.p(f"Five seeds × 5-fold stratified cross-validation gave {J} outer splits per dataset, "
-        f"identical for every model, so all comparisons are paired. The primary metric is AUROC. "
+        f"identical for every model, so all comparisons are paired. The primary metric is the area "
+        f"under the receiver operating characteristic curve (AUROC). "
         f"Because overlapping training sets make the {J} differences dependent, we used the "
         f"corrected resampled t-test (variance inflated by 1/J + n_test/n_train) [@nadeau;@bouckaert] "
         f"and, for parity claims, two one-sided tests (TOST) [@schuirmann;@lakens] with the same "
@@ -714,7 +744,8 @@ def build(R):
         f"; comparisons with the best classical model per dataset (selected post hoc, which "
         f"favours the classical side) and for the VQC are secondary. Accuracy, macro-F1"
         + (", balanced accuracy" if v3 else "") +
-        " and MCC are reported in Supplementary Table S4; thresholds differ between models "
+        " and the Matthews correlation coefficient (MCC) are reported in Supplementary Table S4; "
+        "thresholds differ between models "
         "(probability 0.5 versus decision-function sign), so these are descriptive only.")
     D.p("The analysis was not pre-registered, and parts of it were revised after an initial "
         "analysis of an earlier version of the pipeline (Supplementary Table S8). The ±0.05 "
@@ -746,6 +777,22 @@ def build(R):
     D.h(1, "5. Results")
     D.h(2, "5.1 Discrimination")
     best_pm = {d: max(MODELS, key=lambda m: R[d][m]["auc"]["mean"]) for d in DATASETS}
+    bc_auc = {d: R[d][best[d]]["auc"]["mean"] for d in DATASETS}
+    q_auc = {d: R[d]["QSVM"]["auc"]["mean"] for d in DATASETS}
+    top_q = [d for d in DATASETS if best_pm[d] not in CLASSICAL]
+    win_ct = Counter(best[d] for d in DATASETS).most_common()
+    D.p(f"Discrimination varied widely across datasets (Table 3; Figure 1). The best classical "
+        f"model reached AUROC {min(bc_auc.values()):.3f} ({DS[min(bc_auc, key=bc_auc.get)]}) to "
+        f"{max(bc_auc.values()):.3f} ({DS[max(bc_auc, key=bc_auc.get)]}), and no single classical "
+        f"model was best everywhere ("
+        + "; ".join(f"{ML[m].lower() if m in ('LR', 'RF', 'GB') else ML[m]} on {n}" for m, n in win_ct) +
+        f"). The noiseless QSVM ranged from {min(q_auc.values()):.3f} to {max(q_auc.values()):.3f} "
+        f"and tracked the classical models closely on every dataset except NHANES 2017–18. "
+        + (f"Among four-component models, a quantum variant had the highest mean AUROC on "
+           f"{_names(top_q)} ({', '.join(ML[best_pm[d]] for d in top_q)}), but by at most "
+           f"{max(R[d][best_pm[d]]['auc']['mean'] - bc_auc[d] for d in top_q):.3f} AUROC over the "
+           f"best classical model, far inside the confidence intervals." if top_q else
+           "No quantum variant had the highest mean AUROC on any dataset."))
     D.caption(f"Table 3. AUROC, mean ± 95% CI over {J} paired splits (CIs treat splits as "
               f"independent and are therefore optimistic). Bold: highest mean per dataset among "
               f"four-component models." + (" The last row gives the best classical model on all "
@@ -756,7 +803,7 @@ def build(R):
             if best_pm[d] == m}
     if v3:
         k = MODELS.index("QSVM_noisy") + 1
-        rows.insert(k, ["QSVM, noisy + 1,024 shots"] + [
+        rows.insert(k, [ML["QSVM_noisy_shots"]] + [
             f"{R[d]['QSVM_noisy_shots']['auc']['mean']:.3f} ± "
             f"{R[d]['QSVM_noisy_shots']['auc']['ci']:.3f}" for d in DATASETS])
         bold = {(i + (1 if i >= k else 0), j) for i, j in bold}
@@ -805,7 +852,8 @@ def build(R):
         f". Against the best classical model, the QSVM was equivalent within ±0.05 on "
         f"{len(qb_eq05)} and within ±0.02 on {len(qb_eq02)} datasets"
         + (f" and significantly worse on {_names(qb_worse)}" if qb_worse else "") +
-        f"; the VQC was equivalent on {len(vb_eq05)} and {len(vb_eq02)} datasets respectively"
+        f"; the VQC was equivalent to the best classical model on {len(vb_eq05)} datasets at "
+        f"±0.05 and on {len(vb_eq02)} at ±0.02"
         + (f" and significantly worse on {_names(vb_worse)}" if vb_worse else "") +
         ". " + ("No comparison was equivalent within ±0.01. " if not eq01_any else
                 f"Equivalence within ±0.01 held in only {len(eq01_any)} of the 18 "
@@ -817,9 +865,9 @@ def build(R):
         s1, s2 = S["QSVM_vs_best"][worst_best], S["QSVM_vs_SVM_RBF"][worst_best]
         D.p(f"The largest deficit against the best classical model, on {DS[worst_best]} "
             f"({_d(s1['mean_diff'])}), shrank to {_d(s2['mean_diff'])} and was not significant "
-            f"against the RBF SVM, because every SVM performed poorly on this dataset relative to "
-            f"{ML[best[worst_best]].lower()}; the deficit reflects the learner more than the "
-            f"quantum kernel.")
+            f"against the RBF SVM. Every SVM performed poorly on this dataset relative to "
+            f"{ML[best[worst_best]].lower()}, so the deficit appears to reflect the learner more "
+            f"than the quantum kernel.")
     D.figure("fig2_paired_differences.png",
              "Figure 2. Paired AUROC differences with corrected 95% CIs. Shaded bands: ±0.02 "
              "and ±0.05 equivalence margins.", width=5.8)
@@ -830,8 +878,7 @@ def build(R):
         f"higher or equal point estimate on {len(ent_noent_ge)} of 6. This kernel is a product of "
         f"single-qubit overlaps and is trivially computed classically, yet it came within 0.01 "
         f"AUROC of the best classical model on {len(prod_close)} of 6 datasets ({_names(prod_close)}). "
-        f"Whatever performance the QSVM achieves on these data therefore does not require "
-        f"entanglement. "
+        f"The QSVM's performance on these data therefore did not depend on entanglement. "
         + ((f"With all-qubit readout, removing entanglement from the VQC "
             + ("did not significantly reduce AUROC on any dataset, and the unentangled VQC had the "
                f"higher or equal point estimate on "
@@ -853,8 +900,8 @@ def build(R):
             f"{_d(min(S['QSVM_vs_QSVM_noisy_shots'][d]['mean_diff'] * -1 for d in DATASETS))} to "
             f"{_d(max(S['QSVM_vs_QSVM_noisy_shots'][d]['mean_diff'] * -1 for d in DATASETS))} AUROC "
             f"relative to the noiseless QSVM, and was equivalent to the best classical model within "
-            f"±0.05 on {len(count(S, 'QSVM_noisy_shots_vs_best', 'Equivalent', 0.05))} of 6 "
-            f"datasets (Figure 3B shows the shot sweep).") if v3 else
+            f"±0.05 on {_of6(len(count(S, 'QSVM_noisy_shots_vs_best', 'Equivalent', 0.05)))} "
+            f"(Figure 3B shows the shot sweep).") if v3 else
            " Shot noise was not modelled in this analysis."))
     D.figure("fig3_noise.png",
              "Figure 3. Change in QSVM AUROC relative to the noiseless kernel (first-seed folds, "
@@ -864,9 +911,10 @@ def build(R):
     D.h(2, "5.5 Kernel regime and data complexity")
     D.p(f"Inner cross-validation chose the grid minimum ({bw_min}) in {_pct(frac_min)} of QSVM "
         f"fits"
-        + (f", a bandwidth of 0.02 or less in {_pct(frac_le02)}," if bw_min < 0.02 else "") +
-        f" and 0.5 or more in {_pct(frac_ge05)}. At the modal bandwidth ({modal}) the quantum kernel had lower "
-        f"alignment with the labels than the RBF kernel on {len(kta_below)} of 6 datasets, with the "
+        + (f", a bandwidth of 0.02 or less in {_pct(frac_le02)}," if bw_min < 0.02 else "")
+        + (" and never 0.5 or more." if frac_ge05 == 0 else f" and 0.5 or more in {_pct(frac_ge05)}.") +
+        f" At the modal bandwidth ({modal}) the quantum kernel had lower "
+        f"alignment with the labels than the RBF kernel on {_of6(len(kta_below))}, with the "
         f"lowest alignment on {DS[worst_kta]}; the geometric difference was "
         f"{min(g_vals):.2f}–{max(g_vals):.2f} at λ = 10⁻³, small relative to the "
         f"√n reference scale ({min(math.sqrt(comp[d]['n_used']) for d in DATASETS):.1f}–"
@@ -887,8 +935,8 @@ def build(R):
             sc = M[d]["qubit_scaling"]
             qs = list(sc.keys())
             msg.append(f"{DS[d]}: off-diagonal kernel variance at bandwidth 1 fell from "
-                       f"{sc[qs[0]]['offdiag_var_b1']:.1e} ({qs[0]} qubits) to "
-                       f"{sc[qs[-1]]['offdiag_var_b1']:.1e} ({qs[-1]} qubits), and tuned QSVM "
+                       f"{_sci(sc[qs[0]]['offdiag_var_b1'])} ({qs[0]} qubits) to "
+                       f"{_sci(sc[qs[-1]]['offdiag_var_b1'])} ({qs[-1]} qubits), and tuned QSVM "
                        f"AUROC was {sc[qs[-1]]['qsvm_auc']:.3f} versus {sc[qs[-1]]['svm_rbf_auc']:.3f} "
                        f"for the RBF SVM at {qs[-1]} qubits")
         D.p("Increasing the number of qubits reproduced exponential concentration of the "
@@ -948,6 +996,7 @@ def build(R):
 
     # ---------------- 6 Discussion
     D.h(1, "6. Discussion")
+    D.h(2, "6.1 Principal findings")
     D.p("In a matched, paired design, correctly configured quantum classifiers approached tuned "
         "classical models but did not exceed them, and parity was supported only at the "
         "conventional ±0.05 margin. Three observations are consistent with this. First, inner "
@@ -955,7 +1004,9 @@ def build(R):
         "RBF or low-order polynomial kernel [@canatar;@florez]. Second, the classically trivial "
         "product-state kernel performed as well as the entangling kernel. Third, the geometric "
         "difference was small, so Huang et al.’s necessary condition for a data-driven "
-        "advantage was not met [@huang]. Our results agree with recent independent benchmarks: "
+        "advantage was not met [@huang].")
+    D.h(2, "6.2 Relation to previous work")
+    D.p("Our results agree with recent independent benchmarks: "
         "Kakavand et al. found no significant advantage in 29 comparisons and quantum-kernel "
         "spectra that were too flat or too concentrated, with the one competitive configuration "
         "costing about 2,000 times more computation [@kakavand]; Leither et al. found no "
@@ -970,9 +1021,10 @@ def build(R):
         "its interaction with bandwidth tuning; and an experiment showing how far configuration "
         "faults alone move the conclusion.")
     if v3:
+        D.h(2, "6.3 Measurement cost")
         D.p(f"Finite-shot estimation, not depolarising noise, was the binding constraint. Exact "
-            f"noise at p = 0.01 changed AUROC by at most {noise01:.3f}, whereas 1,024 shots per "
-            f"kernel entry lowered it by {min(shot_pen.values()):.3f}–{max(shot_pen.values()):.3f}. "
+            f"noise at p = 0.01 changed AUROC by at most {noise01:.3f}, whereas adding 1,024 shots "
+            f"per kernel entry lowered it by {min(shot_pen.values()):.3f}–{max(shot_pen.values()):.3f}. "
             f"The penalty in the shot sweep was largest on the datasets whose tuned kernels were "
             f"most compressed ({_names(compressed)}; off-diagonal standard deviation "
             f"{min(spread[d] for d in compressed):.3f}–{max(spread[d] for d in compressed):.3f}), "
@@ -989,18 +1041,22 @@ def build(R):
     svm_weak = [d for d in DATASETS
                 if max(R[d]["SVM_RBF"]["auc"]["mean"], R[d]["SVM_POLY"]["auc"]["mean"])
                 < min(R[d][k]["auc"]["mean"] for k in ("LR", "RF", "GB"))]
+    D.h(2, f"6.{4 if v3 else 3} Comparator choice and implementation sensitivity")
     D.p("The comparison with the kernel-matched RBF SVM matters. Against the best of five "
         "classical models, a quantum kernel can appear inferior because SVMs as a class are "
         "unsuited to a dataset"
         + (f", as on {_names(svm_weak)}, where logistic regression and both tree ensembles beat "
            f"every SVM" if svm_weak else "") +
         ". We recommend that QSVM studies report both comparisons."
-        + (" The implementation-sensitivity experiment shows that untuned bandwidth or "
-           "unscaled inputs alone produce near-chance results; published “quantum "
-           "failures” and “quantum successes” alike may reflect such choices." if v3 else
+        + (" The implementation-sensitivity experiment shows that an untuned bandwidth or "
+           "unscaled inputs alone produce near-chance results, so published reports of quantum "
+           "models failing should be read with the encoding and bandwidth in mind. Because "
+           "configuration choices also determine which classical comparators look strong, the "
+           "same caution applies to reported successes." if v3 else
            " In an earlier, superseded version of our own pipeline, an untuned encoding and an "
            "inactive noise channel produced near-chance QSVM results on the same data, illustrating "
            "how implementation errors can masquerade as findings."))
+    D.h(2, f"6.{5 if v3 else 4} Scope and clinical implications")
     D.p("These conclusions apply to 4-qubit simulations of small, public tabular datasets"
         + (" (with a 12-qubit check on two datasets)" if v3 else "") +
         ". They say nothing about barren plateaus, which such small circuits cannot exhibit "
@@ -1011,12 +1067,21 @@ def build(R):
         "unlikely beneficiaries in the NISQ era. Clinical use of any QML model would also be "
         "subject to the principles of trustworthy healthcare AI [@futureai] and to medical-device "
         "regulation, and quantum infrastructure is concentrated in a few high-income settings.")
-    D.p("Recommendations. Authors should give quantum and classical models identical inputs, splits "
-        "and tuning budgets; report a kernel-matched classical comparator; report and check "
-        "bandwidth selection; verify that noise channels are active and model finite shots; use "
+    D.h(2, f"6.{6 if v3 else 5} Recommendations and future work")
+    D.p("Authors should give quantum and classical models identical inputs, splits and tuning "
+        "budgets; report a kernel-matched classical comparator; report and check bandwidth "
+        "selection; verify that noise channels are active and model finite shots; use "
         "split-corrected paired tests with equivalence margins; and complete the QML-Health-READY "
         "checklist. Reviewers should request it, and funders should prioritise multi-site and "
         "molecular-simulation studies over further single-dataset classification.")
+    D.p("Four extensions would test how far these findings generalise. The first is evaluation on "
+        "quantum hardware with calibrated noise and error mitigation, where shot budgets are real "
+        "rather than simulated. The second is a larger collection of clinical datasets, including "
+        "electronic health record cohorts with external validation, which would allow "
+        "cross-dataset inference rather than per-dataset tests. The third is higher-dimensional "
+        "omics data with more qubits, the setting our triage rates as most plausible for a "
+        "data-driven advantage. The fourth is validation of QML-Health-READY itself, through a "
+        "Delphi consensus process and independent dual-rater application to published studies.")
 
     # ---------------- 7 Limitations
     D.h(1, "7. Limitations")
@@ -1054,9 +1119,11 @@ def build(R):
     D.h(1, "8. Conclusion")
     D.p("On six clinical datasets, correctly configured quantum classifiers matched tuned "
         "classical models within a conventional margin but never outperformed them, and their "
-        "performance did not depend on entanglement. Implementation choices, not quantum effects, "
-        "determined whether they appeared to fail or to succeed. QML-Health-READY sets out the "
-        "reporting needed to tell these apart.")
+        "performance did not depend on entanglement."
+        + (" Their main practical cost was measurement: estimating kernel entries from a "
+           "realistic number of shots erased the parity seen in exact simulation." if v3 else "") +
+        " Implementation choices, not quantum effects, determined whether they appeared to fail "
+        "or to succeed. QML-Health-READY sets out the reporting needed to tell these apart.")
 
     # ---------------- declarations
     D.h(1, "Declarations")
@@ -1072,9 +1139,11 @@ def build(R):
          "(wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/)."),
         ("Code availability", "Code and per-split results: github.com/sirajbb/qml-health-ready; "
          "archived at Zenodo [new version DOI to be inserted]."),
-        ("Use of generative AI", "Claude (Anthropic) assisted with code development, code review "
-         "and manuscript preparation. The authors verified all code, results and references and "
-         "take full responsibility for the content."),
+        ("Declaration of generative AI and AI-assisted technologies in the writing process",
+         "During the preparation of this work the authors used Claude (Anthropic) to assist with "
+         "code development, code review and drafting of the manuscript. After using this tool, the "
+         "authors reviewed and edited the content as needed and take full responsibility for the "
+         "content of the publication."),
         ("Ethics", "Only public, de-identified data were used; ethics approval was not required."),
     ]:
         D.h(2, head)
