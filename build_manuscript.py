@@ -436,6 +436,7 @@ def build(R):
     plots.fig_kernels(comp, gkey)
     plots.fig_triage()
     if v3:
+        plots.fig_graphical_abstract(R, S["QSVM_vs_SVM_RBF"])
         plots.fig_fault_ladder(R)
         plots.fig_qubit_scaling(R, [d for d in DATASETS if M[d].get("qubit_scaling")])
 
@@ -444,6 +445,24 @@ def build(R):
     doc = D.doc
     from docx.shared import Pt
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    # Continuous line numbers and a centred page number, for reviewers
+    ln = OxmlElement("w:lnNumType")
+    ln.set(qn("w:countBy"), "1")
+    ln.set(qn("w:restart"), "continuous")
+    sp = doc.sections[0]._sectPr
+    cols = sp.find(qn("w:cols"))
+    cols.addprevious(ln) if cols is not None else sp.append(ln)  # schema order: before w:cols
+    fp = doc.sections[0].footer.paragraphs[0]
+    fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for tag, text in (("begin", None), (None, "PAGE"), ("end", None)):
+        el = OxmlElement("w:fldChar" if tag else "w:instrText")
+        if tag:
+            el.set(qn("w:fldCharType"), tag)
+        else:
+            el.text = text
+        fp.add_run()._r.append(el)
 
     # ---------------- title block
     tp = doc.add_paragraph()
@@ -453,11 +472,11 @@ def build(R):
     r.font.size = Pt(15)
     ap = doc.add_paragraph()
     ap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = ap.add_run("Mohammed Siraj B¹*, Ruban S¹\n"
-                   "¹School of Engineering, St Aloysius (Deemed to be University), "
+    r = ap.add_run("Mohammed Siraj Bᵃ*, Ruban Sᵃ\n"
+                   "ᵃSchool of Engineering, St Aloysius (Deemed to be University), "
                    "Mangalore 575003, Karnataka, India\n"
-                   "*Corresponding author: siraj019@gmail.com | ORCID: [add ORCID]\n"
-                   "Article type: Original Research")
+                   "*Corresponding author: Mohammed Siraj B, siraj019@gmail.com | ORCID: [add ORCID]\n"
+                   "Article type: Full Length Article")
     r.italic = True
     r.font.size = Pt(10)
 
@@ -514,9 +533,11 @@ def build(R):
     assert words <= 250, f"abstract has {words} words (limit 250)"
     D.p("quantum machine learning; quantum kernel; equivalence testing; benchmarking; "
         "reporting guideline; clinical prediction", bold_prefix="Keywords: ")
-    D.h(1, "Highlights")
+    H = Doc(cite)
+    H.h(1, "Highlights")
     for h in highlights:
-        D.bullet(h)
+        H.bullet(h)
+    H.doc.save(str(OUT_MAIN.with_name("Highlights.docx")))
 
     # ---------------- 1 Introduction
     D.h(1, "1. Introduction")
@@ -753,7 +774,11 @@ def build(R):
         "the designation of the RBF SVM as the primary comparator, and the finite-shot, "
         "all-predictor, implementation-sensitivity and qubit-scaling analyses were added "
         "afterwards. All margins are conventional rather than clinically derived, and all "
-        "comparisons that were run are reported."
+        "comparisons that were run are reported. Because this is a methodological benchmark rather "
+        "than the development of a clinical prediction tool, we do not claim TRIPOD+AI compliance; "
+        "the items it covers that apply here (data sources, outcome and predictor definitions, "
+        "missing data, validation design and performance measures) are reported in Sections "
+        "4.1–4.3."
         + (" A complete independent re-run of the benchmark reproduced every per-split AUROC "
            "exactly except those of SVMs scored with Platt-scaled probabilities, which rely on an "
            "internal random split and differed by at most 0.001 per split; this is why the "
@@ -1128,26 +1153,32 @@ def build(R):
     # ---------------- declarations
     D.h(1, "Declarations")
     for head, txt in [
-        ("Author contributions", "Mohammed Siraj B: conceptualisation, methodology, software, "
-         "formal analysis, investigation, data curation, writing – original draft, "
-         "visualisation. Ruban S: supervision, validation, writing – review and editing. Both "
-         "authors approved the final manuscript."),
-        ("Funding", "No external funding was received."),
-        ("Competing interests", "The authors declare no competing interests."),
+        ("CRediT authorship contribution statement", "Mohammed Siraj B: Conceptualization, "
+         "Methodology, Software, Formal analysis, Investigation, Data curation, Visualization, "
+         "Writing – original draft. Ruban S: Supervision, Validation, Writing – review and "
+         "editing. Both authors approved the final manuscript."),
+        ("Funding", "This research did not receive any specific grant from funding agencies in the "
+         "public, commercial, or not-for-profit sectors."),
+        ("Declaration of competing interest", "The authors declare that they have no known "
+         "competing financial interests or personal relationships that could have appeared to "
+         "influence the work reported in this paper."),
         ("Data availability", "All datasets are public: UCI Machine Learning Repository "
          "(archive.ics.uci.edu), UCSC Xena (xenabrowser.net) and CDC NHANES "
          "(wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/)."),
         ("Code availability", "Code and per-split results: github.com/sirajbb/qml-health-ready; "
          "archived at Zenodo [new version DOI to be inserted]."),
-        ("Declaration of generative AI and AI-assisted technologies in the writing process",
-         "During the preparation of this work the authors used Claude (Anthropic) to assist with "
-         "code development, code review and drafting of the manuscript. After using this tool, the "
-         "authors reviewed and edited the content as needed and take full responsibility for the "
-         "content of the publication."),
-        ("Ethics", "Only public, de-identified data were used; ethics approval was not required."),
+        ("Declaration of generative AI and AI-assisted technologies in the manuscript preparation "
+         "process", "During the preparation of this work the authors used Claude (Anthropic) to "
+         "assist with code development, code review and drafting of the manuscript. After using "
+         "this tool, the authors reviewed and edited the content as needed and take full "
+         "responsibility for the content of the published article."),
+        ("Ethics statement", "Only public, de-identified data were used; ethics approval was not "
+         "required."),
     ]:
         D.h(2, head)
         D.p(txt)
+    D.h(1, "Acknowledgements")
+    D.p("None.")
 
     # ---------------- references (order of first citation)
     D.h(1, "References")
@@ -1164,6 +1195,64 @@ def build(R):
     print(f"Main -> {OUT_MAIN}  (abstract {words} words, {len(cite.order)} references)")
 
     build_supplement(R, M, v3, best, best_full, S, cfg, comp, gkey, cite)
+    if v3:
+        build_cover_letter(mt_eq05, mt_eq02, shot_pen, R)
+
+
+def build_cover_letter(mt_eq05, mt_eq02, shot_pen, R):
+    from docx import Document
+    from docx.shared import Pt, RGBColor
+    doc = Document()
+    doc.styles["Normal"].font.name = "Times New Roman"
+    doc.styles["Normal"].font.size = Pt(11)
+
+    def para(text, action=False):
+        r = doc.add_paragraph().add_run(text)
+        if action:
+            r.bold = True
+            r.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)
+
+    fault = [R[d]["QSVM_fault_b1"]["auc"]["mean"] for d in DATASETS]
+    para("[Date]", action=True)
+    para("The Editor-in-Chief\nComputers in Biology and Medicine")
+    para("Dear Editor,")
+    para(f"We are pleased to submit our manuscript, “{TITLE}”, for consideration as a "
+         f"Full Length Article in Computers in Biology and Medicine.")
+    para("Quantum machine learning is increasingly proposed for clinical prediction, yet published "
+         "comparisons with classical models are rarely paired, seldom test equivalence, and depend "
+         "on implementation choices that are seldom reported. We compared a quantum-kernel support "
+         "vector machine and a variational quantum classifier with five tuned classical models on "
+         "six public clinical datasets, using identical inputs and identical cross-validation "
+         "splits, split-corrected paired tests and Holm-adjusted equivalence tests. We also propose "
+         "QML-Health-READY, an eight-domain reporting framework.")
+    para(f"The main findings are as follows. No quantum model significantly outperformed a "
+         f"classical comparator. Against a kernel-matched classical SVM, the quantum-kernel model "
+         f"was equivalent within ±0.05 AUROC on {len(mt_eq05)} of six datasets, but within "
+         f"±0.02 on only {len(mt_eq02)}. A classically trivial product-state kernel performed as "
+         f"well as the entangling one. Estimating kernel entries from 1,024 measurement shots "
+         f"lowered AUROC by {min(shot_pen.values()):.2f}–{max(shot_pen.values()):.2f}, whereas "
+         f"gate noise had little effect. Finally, common configuration faults alone reduced the "
+         f"quantum model to near-chance performance ({min(fault):.2f}–{max(fault):.2f}), showing "
+         f"how implementation can reverse a study’s conclusion.")
+    para("We believe the work suits Computers in Biology and Medicine because it addresses how "
+         "computational methods for biomedical data should be evaluated and reported, and it "
+         "provides a fully reproducible benchmark that other groups can extend. All code and "
+         "per-split results are openly available on GitHub and archived at Zenodo. The analysis "
+         "history, including corrections made after an internal review of an earlier version of "
+         "our own pipeline, is reported in full in the supplementary material.")
+    para("This manuscript is original, has not been published previously, and is not under "
+         "consideration elsewhere. Both authors have approved the submission. The authors declare "
+         "no competing interests and received no specific funding. Generative AI assistance is "
+         "declared in the manuscript in accordance with the journal’s policy.")
+    para("[If you post a preprint, add: “A preprint is available at <server and DOI>.” "
+         "Otherwise delete this paragraph.]", action=True)
+    para("Thank you for considering our manuscript.")
+    para("Yours sincerely,\n\nMohammed Siraj B (corresponding author), on behalf of both authors\n"
+         "School of Engineering, St Aloysius (Deemed to be University), Mangalore 575003, "
+         "Karnataka, India\nsiraj019@gmail.com")
+    path = OUT_MAIN.with_name("Cover_Letter.docx")
+    doc.save(str(path))
+    print(f"Cover letter -> {path}")
 
 
 def build_supplement(R, M, v3, best, best_full, S, cfg, comp, gkey, cite):

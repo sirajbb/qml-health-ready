@@ -224,6 +224,65 @@ def fig_qubit_scaling(R, datasets):
     _save("figS2_qubit_scaling.png")
 
 
+def fig_graphical_abstract(R, matched):
+    """Journal graphical abstract (13 x 5 cm, landscape): design, accuracy, measurement cost."""
+    fig = plt.figure(figsize=(13 / 2.54 * 2, 5 / 2.54 * 2))
+    gs = fig.add_gridspec(1, 3, width_ratios=[1.15, 1, 1], wspace=0.45)
+
+    ax = fig.add_subplot(gs[0])
+    ax.axis("off")
+    steps = ["6 public clinical datasets", "Identical 4-component inputs",
+             "25 identical cross-validation splits",
+             "5 tuned classical models  vs  QSVM, VQC",
+             "Paired equivalence tests (±0.02, ±0.05)"]
+    for i, s in enumerate(steps):
+        y = 0.92 - i * 0.205
+        ax.text(0.5, y, s, ha="center", va="center", fontsize=8.5, transform=ax.transAxes,
+                bbox=dict(boxstyle="round,pad=0.35", fc="#EAF2F8", ec="#2E86AB", lw=0.8))
+        if i < len(steps) - 1:
+            ax.annotate("", xy=(0.5, y - 0.135), xytext=(0.5, y - 0.07), xycoords="axes fraction",
+                        arrowprops=dict(arrowstyle="->", color="#555", lw=0.8))
+    ax.set_title("A  Matched design", loc="left", fontsize=9.5, fontweight="bold")
+
+    ax = fig.add_subplot(gs[1])
+    ax.axvspan(-0.05, 0.05, color="#E8F3E8")
+    ax.axvspan(-0.02, 0.02, color="#CFE8CF")
+    ax.axvline(0, color="black", lw=0.7)
+    for i, ds in enumerate(DATASETS[::-1]):
+        s = matched[ds]
+        ax.plot(s["ci95"], [i, i], color="#2E86AB", lw=2)
+        ax.plot(s["mean_diff"], i, "o", color="#2E86AB", ms=4.5)
+    ax.set_yticks(range(len(DATASETS)))
+    ax.set_yticklabels([DS_SHORT[d] for d in DATASETS[::-1]], fontsize=7.5)
+    ax.set_xticks([-0.05, 0, 0.05])
+    ax.set_xlabel("AUROC, QSVM − RBF SVM", fontsize=8)
+    ax.tick_params(axis="x", labelsize=7)
+    ax.set_title("B  Matched, not better", loc="left", fontsize=9.5, fontweight="bold")
+    _clean(ax)
+
+    ax = fig.add_subplot(gs[2])
+    y = np.arange(len(DATASETS))[::-1]
+    a = [R[d]["QSVM"]["auc"]["mean"] for d in DATASETS]
+    b = [R[d]["QSVM_noisy_shots"]["auc"]["mean"] for d in DATASETS]
+    for yi, ai, bi in zip(y, a, b):
+        ax.plot([bi, ai], [yi, yi], color="#BBBBBB", lw=1.5)
+    ax.plot(a, y, "o", color="#2E86AB", ms=4.5, label="Exact simulation")
+    ax.plot(b, y, "o", color="#C44E52", ms=4.5, label="Noise + 1,024 shots")
+    ax.set_yticks(y)
+    ax.set_yticklabels([DS_SHORT[d] for d in DATASETS], fontsize=7.5)
+    ax.set_xlabel("QSVM AUROC", fontsize=8)
+    ax.tick_params(axis="x", labelsize=7)
+    ax.legend(fontsize=6.5, frameon=False, loc="upper left")
+    ax.set_title("C  Shots are the real cost", loc="left", fontsize=9.5, fontweight="bold")
+    _clean(ax)
+
+    for ext in ("png", "pdf"):
+        path = FIG_DIR / f"graphical_abstract.{ext}"
+        plt.savefig(path, dpi=300, bbox_inches="tight")
+        print(f"  Saved {path}")
+    plt.close()
+
+
 def fig_triage():
     use_cases = [
         "Molecular simulation\n& drug discovery",
