@@ -519,7 +519,8 @@ def build(R):
     r = ap.add_run("Mohammed Siraj Bᵃ*, Ruban Sᵃ\n"
                    "ᵃSchool of Engineering, St Aloysius (Deemed to be University), "
                    "Mangalore 575003, Karnataka, India\n"
-                   "*Corresponding author: Mohammed Siraj B, siraj019@gmail.com | ORCID: [add ORCID]\n"
+                   "*Corresponding author: Mohammed Siraj B, siraj019@gmail.com\n"
+                   "ORCID: Mohammed Siraj B, 0009-0001-6943-5921; Ruban S, 0000-0001-7653-5130\n"
                    "Article type: Full Length Article")
     r.italic = True
     r.font.size = Pt(10)
