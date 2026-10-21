@@ -26,8 +26,8 @@ QUANTUM = ["QSVM", "QSVM_noisy", "QSVM_noent", "VQC", "VQC_noent"]
 LABEL = {
     "LR": "Logistic regression", "SVM_RBF": "SVM (RBF)", "SVM_POLY": "SVM (polynomial)",
     "RF": "Random forest", "GB": "Gradient boosting",
-    "QSVM": "QSVM", "QSVM_noisy": "QSVM, noisy p=0.01",
-    "QSVM_noent": "QSVM, product-state", "VQC": "VQC", "VQC_noent": "VQC, no entanglement",
+    "QSVM": "QSVM", "QSVM_noisy": "QSVM (noisy, p = 0.01)",
+    "QSVM_noent": "QSVM (product-state)", "VQC": "VQC", "VQC_noent": "VQC (no entanglement)",
 }
 C_CLASSICAL, C_QUANTUM, C_FULL = "#4C72B0", "#C44E52", "#555555"
 COMP_COLOR = {"QSVM_vs_SVM_RBF": "#2E86AB", "QSVM_vs_best": "#1B4F72", "VQC_vs_best": "#F0A500"}
@@ -82,14 +82,24 @@ def fig_auroc_dots(R, best_full=None):
     _save("fig1_auroc.png")
 
 
-def fig_forest(S, margin_lines=(0.02, 0.05)):
-    """S[comp][ds] = dict(mean_diff, ci95=(lo, hi))."""
+def fig_forest(S, margin_lines=(0.02, 0.05), pooled=None):
+    """S[comp][ds] = dict(mean_diff, ci95=(lo, hi)); pooled[comp] adds random-effects diamonds."""
     comps = [c for c in ["QSVM_vs_SVM_RBF", "QSVM_vs_best", "VQC_vs_best"] if c in S]
-    fig, ax = plt.subplots(figsize=(8.5, 7))
+    fig, ax = plt.subplots(figsize=(8.5, 7.8 if pooled else 7))
     ax.axvspan(-margin_lines[1], margin_lines[1], color="#E8F3E8")
     ax.axvspan(-margin_lines[0], margin_lines[0], color="#CFE8CF")
     ax.axvline(0, color="black", lw=0.8)
     yt, yl, yi = [], [], 0
+    if pooled:
+        for c in comps[::-1]:
+            p = pooled[c]
+            lo, hi, m = p["ci95"][0], p["ci95"][1], p["mean_diff"]
+            ax.fill([lo, m, hi, m], [yi, yi + 0.3, yi, yi - 0.3], color=COMP_COLOR[c])
+            yi += 1
+        yt.append(yi - (len(comps) + 1) / 2)
+        yl.append("Pooled (random effects)")
+        ax.axhline(yi - 0.1, color="#888888", lw=0.6)
+        yi += 0.8
     for ds in DATASETS[::-1]:
         for c in comps[::-1]:
             s = S[c][ds]

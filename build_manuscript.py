@@ -151,6 +151,8 @@ REFS = {
     "bouckaert": "Bouckaert RR, Frank E. Evaluating the replicability of significance tests for comparing learning algorithms. In: Advances in Knowledge Discovery and Data Mining (PAKDD 2004). Lecture Notes in Computer Science, vol 3056. Berlin: Springer; 2004. p. 3-12. doi:10.1007/978-3-540-24775-3_3.",
     "schuirmann": "Schuirmann DJ. A comparison of the two one-sided tests procedure and the power approach for assessing the equivalence of average bioavailability. J Pharmacokinet Biopharm. 1987;15(6):657-680. doi:10.1007/BF01068419.",
     "lakens": "Lakens D. Equivalence tests: a practical primer for t tests, correlations, and meta-analyses. Soc Psychol Personal Sci. 2017;8(4):355-362. doi:10.1177/1948550617697177.",
+    "dersimonian": "DerSimonian R, Laird N. Meta-analysis in clinical trials. Control Clin Trials. 1986;7(3):177-188. doi:10.1016/0197-2456(86)90046-2.",
+    "inthout": "IntHout J, Ioannidis JPA, Borm GF. The Hartung-Knapp-Sidik-Jonkman method for random effects meta-analysis is straightforward and considerably outperforms the standard DerSimonian-Laird method. BMC Med Res Methodol. 2014;14:25. doi:10.1186/1471-2288-14-25.",
     "holm": "Holm S. A simple sequentially rejective multiple test procedure. Scand J Stat. 1979;6(2):65-70.",
     "cortes": "Cortes C, Mohri M, Rostamizadeh A. Algorithms for learning kernels based on centered alignment. J Mach Learn Res. 2012;13:795-828.",
 }
@@ -189,7 +191,8 @@ def paired(q, c, ratio):
     J, m, s = len(d), float(d.mean()), float(d.std(ddof=1))
     se = s * math.sqrt(1 / J + ratio)
     tc = stats.t.ppf(0.975, J - 1)
-    out = {"mean_diff": m, "ci95": (m - tc * se, m + tc * se), "dz": m / s if s else float("nan"),
+    out = {"mean_diff": m, "se": se, "ci95": (m - tc * se, m + tc * se),
+           "dz": m / s if s else float("nan"),
            "p_t": float(2 * stats.t.sf(abs(m / se), J - 1)) if se else 1.0}
     for M in MARGINS:
         out[M] = float(max(stats.t.sf((m + M) / se, J - 1),
@@ -226,6 +229,11 @@ def _sci(x):
     return f"{m} × 10{str(int(e)).translate(sup)}"
 
 
+def _vgrid_of(R):
+    grid = R["breast_cancer"]["__meta__"].get("vqc_tuning", {}).get("grid", [])
+    return "{" + ", ".join(f"({layers}, {lr})" for layers, lr in grid) + "}"
+
+
 def _pct(x):
     return f"{100 * x:.0f}%"
 
@@ -245,10 +253,11 @@ def analyse(R):
     best = {d: max(CLASSICAL, key=lambda k: R[d][k]["auc"]["mean"]) for d in DATASETS}
     val = lambda d, k: R[d][k]["auc"]["values"]
     km = "SVM_RBF_df" if "SVM_RBF_df" in R["breast_cancer"] else "SVM_RBF"
+    vq = "VQC_tuned" if "VQC_tuned" in R["breast_cancer"] else "VQC"
     pairs = {
         "QSVM_vs_SVM_RBF": lambda d: ("QSVM", km),
         "QSVM_vs_best": lambda d: ("QSVM", best[d]),
-        "VQC_vs_best": lambda d: ("VQC", best[d]),
+        "VQC_vs_best": lambda d: (vq, best[d]),
         "QSVM_noent_vs_best": lambda d: ("QSVM_noent", best[d]),
         "QSVM_vs_QSVM_noent": lambda d: ("QSVM", "QSVM_noent"),
         "QSVM_vs_QSVM_noisy": lambda d: ("QSVM", "QSVM_noisy"),
@@ -264,6 +273,8 @@ def analyse(R):
             "best_full_vs_best": lambda d: (best_full[d], best[d]),
             "QSVM_vs_best_full": lambda d: ("QSVM", best_full[d]),
         })
+    if vq == "VQC_tuned":
+        pairs["VQC_untuned_vs_best"] = lambda d: ("VQC", best[d])
     S = {}
     for name, f in pairs.items():
         S[name] = {d: paired(val(d, f(d)[0]), val(d, f(d)[1]), ratio[d]) for d in DATASETS}
@@ -281,7 +292,33 @@ def analyse(R):
                     s[f"verdict_{M_}"] = "Equivalent"
                 else:
                     s[f"verdict_{M_}"] = "Inconclusive"
-    return M, v3, best, best_full, S
+    pooled = [c for c in ("QSVM_vs_SVM_RBF", "QSVM_vs_best", "VQC_vs_best",
+                          "QSVM_vs_QSVM_noisy_shots") if c in S]
+    P = {c: pool([S[c][d] for d in DATASETS]) for c in pooled}
+    return M, v3, best, best_full, S, P
+
+
+def pool(stats_list):
+    """Random-effects pooled difference across datasets: DerSimonian-Laird tau^2 with the
+    Hartung-Knapp-Sidik-Jonkman variance, floored at the fixed-weight variance (conservative)."""
+    y = np.array([s["mean_diff"] for s in stats_list])
+    v = np.array([s["se"] for s in stats_list]) ** 2
+    k = len(y)
+    w = 1 / v
+    q = float(np.sum(w * (y - np.sum(w * y) / w.sum()) ** 2))
+    tau2 = max(0.0, (q - (k - 1)) / (w.sum() - np.sum(w ** 2) / w.sum()))
+    ws = 1 / (v + tau2)
+    mu = float(np.sum(ws * y) / ws.sum())
+    var = max(np.sum(ws * (y - mu) ** 2) / ((k - 1) * ws.sum()), 1 / ws.sum())
+    se = math.sqrt(var)
+    t975, t95 = stats.t.ppf(0.975, k - 1), stats.t.ppf(0.95, k - 1)
+    out = {"mean_diff": mu, "se": se, "ci95": (mu - t975 * se, mu + t975 * se),
+           "ci90": (mu - t95 * se, mu + t95 * se), "tau": math.sqrt(tau2),
+           "I2": max(0.0, (q - (k - 1)) / q) if q > 0 else 0.0,
+           "p": float(2 * stats.t.sf(abs(mu / se), k - 1)), "k": k}
+    for M_ in MARGINS:
+        out[f"equiv_{M_}"] = -M_ < out["ci90"][0] and out["ci90"][1] < M_
+    return out
 
 
 def count(S, comp, verdict, margin):
@@ -332,10 +369,12 @@ class Doc:
         r.italic = True
         return par
 
-    def table(self, headers, rows, size=8.5, bold=()):
-        from docx.shared import Pt
+    def table(self, headers, rows, size=8.5, bold=(), widths=None):
+        from docx.shared import Pt, Inches
         t = self.doc.add_table(rows=1, cols=len(headers))
         t.style = "Table Grid"
+        if widths:
+            t.autofit = False
         for i, h in enumerate(headers):
             t.rows[0].cells[i].text = h
         for row in rows:
@@ -344,6 +383,8 @@ class Doc:
                 cells[j].text = self.cite(str(v))
         for ri, row in enumerate(t.rows):
             for ci, cell in enumerate(row.cells):
+                if widths:
+                    cell.width = Inches(widths[ci])
                 for par in cell.paragraphs:
                     for r in par.runs:
                         r.font.size = Pt(size)
@@ -366,8 +407,10 @@ class Doc:
 # ------------------------------------------------------------------ build
 def build(R):
     import plots
-    M, v3, best, best_full, S = analyse(R)
+    M, v3, best, best_full, S, P = analyse(R)
     dfp = "SVM_RBF_df" in R["breast_cancer"]
+    vt = "VQC_tuned" in R["breast_cancer"]
+    _vgrid = _vgrid_of(R)
     mm = "QSVM_fault_minmax" in R["breast_cancer"]
     cfg = M["breast_cancer"]["config"]
     import os
@@ -431,7 +474,8 @@ def build(R):
     # ---------------- figures
     print("Figures ...")
     plots.fig_auroc_dots(R, {d: R[d][best_full[d]]["auc"]["mean"] for d in DATASETS} if v3 else None)
-    plots.fig_forest({c: S[c] for c in ("QSVM_vs_SVM_RBF", "QSVM_vs_best", "VQC_vs_best")})
+    plots.fig_forest({c: S[c] for c in ("QSVM_vs_SVM_RBF", "QSVM_vs_best", "VQC_vs_best")},
+                     pooled=P)
     plots.fig_noise(R, {d: M[d]["shot_curve"] for d in DATASETS} if v3 else None)
     plots.fig_kernels(comp, gkey)
     plots.fig_triage()
@@ -484,28 +528,32 @@ def build(R):
     D.h(1, "Abstract")
     abstract = [
         ("Background: ", "Quantum machine learning (QML) is promoted for clinical prediction, but "
-         "comparisons with classical models are rarely paired, seldom test equivalence, and depend "
-         "on rarely reported implementation choices."),
-        ("Methods: ", f"On six public clinical datasets we compared a quantum-kernel support vector "
-         f"machine (QSVM; 4-qubit ZZ feature map with tuned bandwidth) and a variational quantum "
-         f"classifier (VQC) with five tuned classical models, using identical four-component inputs "
-         f"and {J} identical cross-validation splits. Paired differences in the area under the ROC "
-         f"curve (AUROC) were assessed with a corrected resampled t-test and Holm-adjusted "
-         f"equivalence tests (margins ±0.02 and ±0.05). Entanglement-ablation, noise"
-         f"{', finite-shot, implementation-fault' if v3 else ''} and kernel-similarity analyses "
-         f"followed. We also propose QML-Health-READY, an eight-domain reporting framework."),
-        ("Results: ", (f"No quantum model significantly outperformed a classical comparator. "
+         "its comparisons with classical models are rarely paired or tested for equivalence."),
+        ("Methods: ", f"On six public clinical datasets, we compared a quantum-kernel support vector "
+         f"machine (QSVM; 4 qubits, tuned bandwidth) and a variational quantum classifier (VQC) "
+         f"with five tuned classical models, using identical four-component inputs and {J} "
+         f"identical cross-validation splits. Paired differences in the area under the ROC curve "
+         f"(AUROC) were assessed with a corrected resampled t-test, Holm-adjusted equivalence tests "
+         f"(margins ±0.02 and ±0.05) and random-effects pooling. Ablation, noise"
+         f"{', finite-shot and implementation-fault' if v3 else ''} analyses followed. We "
+         f"propose QML-Health-READY, an eight-domain reporting framework."),
+        ("Results: ", (f"No quantum model significantly outperformed any classical comparator. "
                        if not better else "") +
-         f"Against the kernel-matched radial basis function (RBF) SVM, QSVM was equivalent within ±0.05 on "
-         f"{len(mt_eq05)} of 6 datasets and within ±0.02 on {len(mt_eq02)}"
-         + (f"; against the best classical model it was significantly worse on "
+         f"Pooled across datasets, QSVM differed from the kernel-matched radial basis function "
+         f"(RBF) SVM by {_d(P['QSVM_vs_SVM_RBF']['mean_diff'])} AUROC (95% CI "
+         f"{_d(P['QSVM_vs_SVM_RBF']['ci95'][0])} to {_d(P['QSVM_vs_SVM_RBF']['ci95'][1])}"
+         + ("; equivalent within ±0.02" if P['QSVM_vs_SVM_RBF']['equiv_0.02'] else "") +
+         f"), and the VQC differed from the best classical model by "
+         f"{_d(P['VQC_vs_best']['mean_diff'])} ({_d(P['VQC_vs_best']['ci95'][0])} to "
+         f"{_d(P['VQC_vs_best']['ci95'][1])}). Per dataset, QSVM was equivalent to the RBF SVM "
+         f"within ±0.05 on {len(mt_eq05)} of 6"
+         + (f" but significantly worse than the best classical model on "
             f"{_names(qb_worse)} ({_d(S['QSVM_vs_best'][qb_worse[0]]['mean_diff'])})" if qb_worse else "") +
-         f". VQC was equivalent to the best classical model within ±0.05 on {len(vb_eq05)} of 6. "
-         + ("No comparison was equivalent within ±0.01. " if not eq01_any else "") +
-         f"A classically trivial product-state kernel came within 0.01 AUROC of the best "
-         f"classical model on {len(prod_close)} of 6 datasets."
+         f". A classically trivial product-state kernel performed as well as the entangling kernel."
          + (f" With p = 0.01 depolarising noise and 1,024 shots per kernel entry, QSVM AUROC fell "
-            f"by {min(shot_pen.values()):.2f}–{max(shot_pen.values()):.2f}; an untuned bandwidth "
+            f"by a pooled {P['QSVM_vs_QSVM_noisy_shots']['mean_diff']:.3f} "
+            f"({P['QSVM_vs_QSVM_noisy_shots']['ci95'][0]:.3f}–"
+            f"{P['QSVM_vs_QSVM_noisy_shots']['ci95'][1]:.3f}); an untuned bandwidth "
             f"gave near-chance AUROC "
             f"({min(R[d]['QSVM_fault_b1']['auc']['mean'] for d in DATASETS):.2f}–"
             f"{max(R[d]['QSVM_fault_b1']['auc']['mean'] for d in DATASETS):.2f})."
@@ -515,7 +563,7 @@ def build(R):
          + ("; finite-shot estimation, not gate noise, was their main practical cost, and "
             "configuration errors alone could reverse the conclusion. " if v3 else
             ", and implementation errors alone can reverse the conclusion. ") +
-         "QML-Health-READY specifies the reporting needed to make such claims credible."),
+         "QML-Health-READY specifies the reporting that credible claims require."),
     ]
     highlights = [
         "Quantum classifiers matched, but never beat, tuned classical models on clinical data",
@@ -634,7 +682,9 @@ def build(R):
         "one-line justification. Studies meeting all Core items (†) are READY-Reportable; "
         "readiness tiers are defined in Supplementary Table S1, and our own self-assessment is in "
         "Supplementary Table S6. Meeting the Core items is necessary for credible reporting and "
-        "does not imply clinical usefulness.")
+        "does not imply clinical usefulness."
+        + (" Section 5.9 reports, for each domain, an effect measured in this study that the "
+           "corresponding items would have detected." if v3 else ""))
     D.caption("Table 1. QML-Health-READY domains. † Core item.")
     D.table(["Domain", "Name", "Items"], [
         ("R†", "Rationale", "Hypothesised mechanism for advantage; data-complexity analysis "
@@ -658,7 +708,7 @@ def build(R):
          "[@tripod;@claim;@futureai]."),
         ("Y", "Yardstick for cost", "Wall-clock time, circuit executions and shots per fit versus "
          "classical baselines; data-access assumptions; dequantisation check [@tang;@sahebi]."),
-    ], size=9)
+    ], size=9, widths=[0.6, 1.3, 4.1])
 
     # ---------------- 4 Methods
     D.h(1, "4. Methods")
@@ -732,7 +782,12 @@ def build(R):
         + ("⟨Z⟩ on all qubits through a trainable linear layer" if v3 else
            "⟨Z₀⟩ through a trainable affine layer") +
         f", and was trained by full-batch Adam (learning rate {cfg['vqc_lr']}, {cfg['vqc_epochs']} "
-        f"epochs, cross-entropy) without hyperparameter tuning. Its ablation replaces the "
+        f"epochs, cross-entropy)"
+        + (f"; its number of layers and learning rate were tuned by 3-fold inner cross-validation "
+           f"over {_vgrid}, as for the QSVM, and the fixed configuration ({cfg['vqc_layers']} layers, "
+           f"learning rate {cfg['vqc_lr']}) is reported as a sensitivity analysis. "
+           if vt else " without hyperparameter tuning. ") +
+        f"Its ablation replaces the "
         f"entangling layers with single-qubit rotations"
         + ("; with all-qubit readout this removes entanglement only." if v3 else
            "; because readout is on qubit 0 only, it also removes access to three of the four "
@@ -759,7 +814,13 @@ def build(R):
         f"variance at margins of ±0.01, ±0.02 and ±0.05 AUROC. Within each comparison "
         f"family, p-values across the six datasets were Holm-adjusted [@holm]. A comparison is "
         f"Equivalent at a margin if its adjusted TOST p < 0.05, Worse or Better if its adjusted "
-        f"t-test p < 0.05, and otherwise Inconclusive. The primary QSVM comparison is with the RBF "
+        f"t-test p < 0.05, and otherwise Inconclusive. To summarise across datasets, the "
+        f"per-dataset differences and their corrected standard errors were pooled with a "
+        f"random-effects model (DerSimonian–Laird heterogeneity; Hartung–Knapp–Sidik–Jonkman "
+        f"confidence interval with k − 1 degrees of freedom) [@dersimonian;@inthout], and pooled "
+        f"equivalence was declared when the 90% confidence interval lay inside the margin. With six "
+        f"datasets these pooled estimates summarise the datasets studied rather than all clinical "
+        f"prediction tasks. The primary QSVM comparison is with the RBF "
         f"SVM, which differs only in the kernel"
         + (" and, like the QSVM, was scored by its decision function" if dfp else "") +
         f"; comparisons with the best classical model per dataset (selected post hoc, which "
@@ -832,13 +893,17 @@ def build(R):
             f"{R[d]['QSVM_noisy_shots']['auc']['mean']:.3f} ± "
             f"{R[d]['QSVM_noisy_shots']['auc']['ci']:.3f}" for d in DATASETS])
         bold = {(i + (1 if i >= k else 0), j) for i, j in bold}
+        if vt:
+            rows.append(["VQC (tuned)"] + [
+                f"{R[d]['VQC_tuned']['auc']['mean']:.3f} ± {R[d]['VQC_tuned']['auc']['ci']:.3f}"
+                for d in DATASETS])
         if dfp:
             rows.append(["SVM (RBF), decision-function score"] + [
                 f"{R[d]['SVM_RBF_df']['auc']['mean']:.3f} ± {R[d]['SVM_RBF_df']['auc']['ci']:.3f}"
                 for d in DATASETS])
         rows.append(["Best classical, all predictors"] + [
             f"{R[d][best_full[d]]['auc']['mean']:.3f} ({ML[best_full[d][:-5]]})" for d in DATASETS])
-    D.table(["Model"] + [DS[d] for d in DATASETS], rows, size=7.5, bold=bold)
+    D.table(["Model"] + [DS[d] for d in DATASETS], rows, size=7.5, bold=bold, widths=[1.2] + [0.8] * 6)
     D.figure("fig1_auroc.png",
              f"Figure 1. AUROC (mean ± 95% CI, {J} splits) for classical (blue) and quantum "
              f"(red) models on identical four-component inputs."
@@ -851,7 +916,7 @@ def build(R):
               "inconclusive, W = worse, B = better).")
     t4 = []
     lab = {"QSVM_vs_SVM_RBF": "QSVM − SVM (RBF)", "QSVM_vs_best": "QSVM − best",
-           "VQC_vs_best": "VQC − best"}
+           "VQC_vs_best": "VQC (tuned) − best" if vt else "VQC − best"}
     for d in DATASETS:
         for c in ("QSVM_vs_SVM_RBF", "QSVM_vs_best", "VQC_vs_best"):
             s = S[c][d]
@@ -861,7 +926,8 @@ def build(R):
                        _p(s["p_t_holm"]), _p(s["tost_holm_0.02"]), _p(s["tost_holm_0.05"]),
                        f"{s['verdict_0.02'][0]} / {s['verdict_0.05'][0]}"))
     D.table(["Dataset", "Comparison", "Δ AUROC [95% CI]", "p(t)", "p(TOST ±0.02)",
-             "p(TOST ±0.05)", "Verdict ±0.02 / ±0.05"], t4, size=7.5)
+             "p(TOST ±0.05)", "Verdict ±0.02 / ±0.05"], t4, size=7.5,
+            widths=[0.95, 1.45, 1.3, 0.5, 0.6, 0.6, 0.6])
     D.p((f"No quantum model was significantly better than a classical comparator"
          if not better else
          f"A quantum model was significantly better in {len(better)} "
@@ -883,8 +949,37 @@ def build(R):
         ". " + ("No comparison was equivalent within ±0.01. " if not eq01_any else
                 f"Equivalence within ±0.01 held in only {len(eq01_any)} of the 18 "
                 f"comparisons. ") +
-        ("Parity therefore holds at the conventional ±0.05 margin but is not established at "
-         "tighter margins."))
+        ("Dataset by dataset, parity therefore holds at the conventional ±0.05 margin but is "
+         "rarely established at tighter margins."))
+
+    def _eq(p):
+        return ("equivalent within ±0.02" if p["equiv_0.02"] else
+                "equivalent within ±0.05 but not ±0.02" if p["equiv_0.05"] else
+                "not equivalent within ±0.05")
+
+    def _pt(p):
+        return (f"{_d(p['mean_diff'])} AUROC (95% CI {_d(p['ci95'][0])} to {_d(p['ci95'][1])}; "
+                f"τ = {p['tau']:.3f}, I² = {100 * p['I2']:.0f}%)")
+
+    pk, pb, pv = P["QSVM_vs_SVM_RBF"], P["QSVM_vs_best"], P["VQC_vs_best"]
+    D.p(f"Pooled across the six datasets (Figure 2, bottom rows), the QSVM differed from the "
+        f"kernel-matched RBF SVM by {_pt(pk)}, {_eq(pk)}. Its pooled difference from the best "
+        f"classical model was {_pt(pb)}, {_eq(pb)}, and the "
+        f"{'tuned ' if 'VQC_tuned' in R['breast_cancer'] else ''}VQC differed from the best "
+        f"classical model by {_pt(pv)}, {_eq(pv)}. "
+        + ("No pooled difference significantly favoured a quantum model, and every pooled point "
+           "estimate was negative." if all(p["mean_diff"] < 0 and p["ci95"][0] < 0
+                                            for p in (pk, pb, pv)) else ""))
+    if vt:
+        tdiff = [R[d]["VQC_tuned"]["auc"]["mean"] - R[d]["VQC"]["auc"]["mean"] for d in DATASETS]
+        n_fixed = len(count(S, "VQC_untuned_vs_best", "Equivalent", 0.05))
+        D.p(f"Tuning the VQC changed its AUROC by {_d(min(tdiff))} to {_d(max(tdiff))} relative to "
+            f"the fixed configuration. The fixed-configuration VQC was equivalent to the best "
+            f"classical model within ±0.05 on {n_fixed} of 6 datasets, against {len(vb_eq05)} for "
+            f"the tuned VQC"
+            + (", so the VQC conclusions do not depend on tuning." if n_fixed == len(vb_eq05) else
+               "; tuning therefore changed the per-dataset equivalence verdicts, and the tuned "
+               "results are the primary ones."))
     worst_best = qb_worse[0] if qb_worse else None
     if worst_best and worst_best not in mt_worse:
         s1, s2 = S["QSVM_vs_best"][worst_best], S["QSVM_vs_SVM_RBF"][worst_best]
@@ -894,8 +989,9 @@ def build(R):
             f"{ML[best[worst_best]].lower()}, so the deficit appears to reflect the learner more "
             f"than the quantum kernel.")
     D.figure("fig2_paired_differences.png",
-             "Figure 2. Paired AUROC differences with corrected 95% CIs. Shaded bands: ±0.02 "
-             "and ±0.05 equivalence margins.", width=5.8)
+             "Figure 2. Paired AUROC differences with corrected 95% CIs for each dataset; diamonds "
+             "show random-effects pooled estimates with Hartung–Knapp 95% CIs. Shaded bands: "
+             "±0.02 and ±0.05 equivalence margins.", width=5.8)
 
     D.h(2, "5.3 Entanglement and the product-state kernel")
     D.p(f"Removing entanglement did not significantly change QSVM AUROC on "
@@ -1019,6 +1115,57 @@ def build(R):
         f"(|grid| × [n(n+1)/2 training + n_test·n test entries]), each executed for "
         f"hundreds to thousands of shots, whereas every classical model fits in seconds.")
 
+    v2_path = HERE / "results" / "superseded" / "v2_benchmark_results.json"
+    if v3 and v2_path.exists():
+        v2 = json.loads(v2_path.read_text())
+        hf_leak = [v2["heart_failure"][k]["auc"]["mean"] - R["heart_failure"][k]["auc"]["mean"]
+                   for k in CLASSICAL]
+        b1_drop = [R[d]["QSVM"]["auc"]["mean"] - R[d]["QSVM_fault_b1"]["auc"]["mean"]
+                   for d in DATASETS]
+        nh = "nhanes_diabetes"
+        ps = P["QSVM_vs_QSVM_noisy_shots"]
+        D.h(2, "5.9 Empirical support for the framework domains")
+        D.p("Each QML-Health-READY domain corresponds to an effect measured in this study, and "
+            "several were large enough to change a conclusion (Table 5). The heart-failure comparison is a clean test of the "
+            "leakage-audit item: version 2 of our pipeline (Supplementary Table S8) used the same "
+            "splits and models but kept follow-up time as a predictor, and every classical model "
+            f"scored {min(hf_leak):.2f}–{max(hf_leak):.2f} AUROC higher than in the reported "
+            "analysis. These observations support the framework’s items; they do not replace the "
+            "consensus and inter-rater validation that a reporting guideline requires.")
+        D.caption("Table 5. Effects measured in this study that each QML-Health-READY domain would "
+                  "detect.")
+        D.table(["Domain", "Item tested", "Measured effect in this study"], [
+            ("R† Rationale", "Data-complexity analysis",
+             f"Geometric difference {min(g_vals):.1f}–{max(g_vals):.1f} against a √n scale of "
+             f"≈17, and lower quantum than RBF kernel–target alignment on "
+             f"{_of6(len(kta_below))}: no data-driven advantage was expected, and none was seen."),
+            ("E† Encoding", "Bandwidth tuning and input scaling",
+             f"Fixing the bandwidth at 1 lowered QSVM AUROC by {min(b1_drop):.2f}–"
+             f"{max(b1_drop):.2f}, to near chance."),
+            ("A† Algorithm & baselines", "Kernel-matched comparator; entanglement ablation",
+             f"The NHANES deficit was {_d(S['QSVM_vs_best'][nh]['mean_diff'])} against the best "
+             f"classical model but {_d(S['QSVM_vs_SVM_RBF'][nh]['mean_diff'])} (not significant) "
+             f"against the RBF SVM; the product-state kernel matched the entangling one."),
+            ("D† Data & splits", "Leakage audit (post-baseline predictors)",
+             f"Including heart-failure follow-up time inflated classical AUROC by "
+             f"{min(hf_leak):.2f}–{max(hf_leak):.2f}."),
+            ("Y† Yield", "Pre-specified equivalence margin",
+             f"QSVM–RBF SVM equivalence held on {len(mt_eq05)} of 6 datasets at ±0.05 but "
+             f"{len(mt_eq02)} at ±0.02 and {len(count(S, 'QSVM_vs_SVM_RBF', 'Equivalent', 0.01))} "
+             f"at ±0.01."),
+            ("R† Robustness", "Explicit noise and finite shots",
+             f"Exact depolarising noise (p = 0.01) changed AUROC by at most {noise01:.3f}; 1,024 "
+             f"shots lowered it by a pooled {ps['mean_diff']:.3f}."),
+            ("E Evaluation in context", "Threshold-dependent metrics",
+             f"On NHANES the QSVM reached AUROC {R[nh]['QSVM']['auc']['mean']:.2f} but MCC "
+             f"{R[nh]['QSVM']['mcc']['mean']:.3f} and balanced accuracy "
+             f"{R[nh]['QSVM']['bacc']['mean']:.2f}: at its default threshold it predicted almost "
+             f"only the majority class."),
+            ("Y Yardstick for cost", "Circuit executions per fit",
+             f"{min(circ.values()) / 1e6:.2f}–{max(circ.values()) / 1e6:.1f} million kernel-entry "
+             f"circuits per tuned outer split, each repeated for many shots."),
+        ], size=8.5, widths=[1.05, 1.45, 3.5])
+
     # ---------------- 6 Discussion
     D.h(1, "6. Discussion")
     D.h(2, "6.1 Principal findings")
@@ -1123,8 +1270,10 @@ def build(R):
         "Equivalence margins are conventional rather than clinically derived; the best classical "
         "model is selected post hoc; single-model confidence intervals treat dependent splits as "
         "independent.",
-        "The VQC was not tuned and used one initialisation per split"
-        + ("." if v3 else ", and its ablation also removed three of four inputs from the readout."),
+        ("The VQC used one initialisation per split and a small tuning grid (four "
+         "configurations), and its entanglement ablation used the fixed configuration." if vt else
+         "The VQC was not tuned and used one initialisation per split"
+         + ("." if v3 else ", and its ablation also removed three of four inputs from the readout.")),
         (f"The selected bandwidth frequently lay at the lower edge of the grid ({_pct(frac_min)} of "
          f"fits at {bw_min})." if frac_min >= 0.2 else
          f"The bandwidth grid was searched down to {bw_min}; {_pct(frac_min)} of fits chose the "
@@ -1319,7 +1468,10 @@ def build_supplement(R, M, v3, best, best_full, S, cfg, comp, gkey, cite):
         ("Gradient boosting", "trees ∈ {100, 200}; learning rate ∈ {0.05, 0.1, 0.2}; depth ∈ {3, 5}"),
         ("QSVM (all variants)", f"bandwidth ∈ {{{', '.join(str(b) for b in cfg['bandwidths'])}}}; "
                                 f"C ∈ {{{', '.join(str(c) for c in cfg['qsvm_C'])}}}"),
-        ("VQC", f"fixed: {cfg['vqc_layers']} layers, Adam lr {cfg['vqc_lr']}, {cfg['vqc_epochs']} epochs"),
+        ("VQC", (f"(layers, Adam learning rate) ∈ {_vgrid_of(R)}; {cfg['vqc_epochs']} epochs; "
+                 f"fixed configuration for sensitivity and ablation: {cfg['vqc_layers']} layers, "
+                 f"lr {cfg['vqc_lr']}") if "VQC_tuned" in R["breast_cancer"] else
+         f"fixed: {cfg['vqc_layers']} layers, Adam lr {cfg['vqc_lr']}, {cfg['vqc_epochs']} epochs"),
     ], size=9)
 
     D.caption("Table S6. QML-Health-READY self-assessment of this study.")

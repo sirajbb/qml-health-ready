@@ -337,15 +337,15 @@ def _vqc_qnode(entangle, n_layers):
         return [qml.expval(qml.PauliZ(q)) for q in wires]
     return circuit
 
-def vqc_fit_predict(Z_tr, y_tr, Z_te, entangle, seed):
+def vqc_fit_predict(Z_tr, y_tr, Z_te, entangle, seed, layers=VQC_LAYERS, lr=VQC_LR):
     """AngleEmbedding + StronglyEntanglingLayers; logit = a . <Z_q> + b over all qubits;
     full-batch Adam on binary cross-entropy."""
-    circuit = _vqc_qnode(entangle, VQC_LAYERS)
+    circuit = _vqc_qnode(entangle, layers)
     rng = np.random.default_rng(seed)
     Xtr = pnp.array(np.clip(Z_tr, -np.pi, np.pi), requires_grad=False)
     Xte = np.clip(Z_te, -np.pi, np.pi)
     yt = pnp.array(y_tr.astype(float), requires_grad=False)
-    w = pnp.array(rng.normal(0, 0.5, (VQC_LAYERS, N_QUBITS, 3)), requires_grad=True)
+    w = pnp.array(rng.normal(0, 0.5, (layers, N_QUBITS, 3)), requires_grad=True)
     a = pnp.array(np.full(N_QUBITS, 0.5), requires_grad=True)
     b = pnp.array(0.0, requires_grad=True)
 
@@ -356,7 +356,7 @@ def vqc_fit_predict(Z_tr, y_tr, Z_te, entangle, seed):
         z = logits(Xtr, w, a, b)
         return pnp.mean(pnp.logaddexp(0.0, z) - yt * z)
 
-    opt = qml.AdamOptimizer(VQC_LR)
+    opt = qml.AdamOptimizer(lr)
     for _ in range(VQC_EPOCHS):
         w, a, b = opt.step(loss, w, a, b)
     return np.asarray(logits(Xte, w, a, b))
@@ -475,6 +475,26 @@ def run_vqc(folds, entangle=True):
         z = vqc_fit_predict(f["Z_tr"], f["y_tr"], f["Z_te"], entangle, f["seed"])
         scores.append(_metrics(f["y_te"], (z > 0).astype(int), z))
     return scores
+
+VQC_GRID = [(1, 0.05), (3, 0.05), (5, 0.05), (3, 0.15)]   # (layers, Adam learning rate)
+
+def run_vqc_tuned(folds):
+    """VQC with (layers, learning rate) chosen by 3-fold inner CV on AUROC, as for the QSVM."""
+    scores, chosen = [], []
+    for f in folds:
+        y = f["y_tr"]
+        inner = list(StratifiedKFold(CV_INNER, shuffle=True,
+                                     random_state=f["seed"]).split(f["Z_tr"], y))
+        cv = {}
+        for layers, lr in VQC_GRID:
+            cv[(layers, lr)] = np.mean([roc_auc_score(y[v], vqc_fit_predict(
+                f["Z_tr"][a], y[a], f["Z_tr"][v], True, f["seed"], layers, lr))
+                for a, v in inner])
+        layers, lr = max(cv, key=cv.get)
+        z = vqc_fit_predict(f["Z_tr"], y, f["Z_te"], True, f["seed"], layers, lr)
+        scores.append(_metrics(f["y_te"], (z > 0).astype(int), z))
+        chosen.append((layers, lr))
+    return scores, chosen
 
 def paired_stats(q, c, ratio):
     """Quantum minus comparator, paired over identical outer folds
@@ -690,6 +710,33 @@ class _Enc(json.JSONEncoder):
         return super().default(o)
 
 BENCH_PATH = OUT_DIR / ("benchmark_results_fast.json" if FAST_MODE else "benchmark_results.json")
+
+# ----- VQC tuning mode (v3c): tuned VQC on identical folds, one output file per dataset so
+# datasets can run in parallel. Run with:  QML_MODE=vqc_tune QML_DATASETS=<one dataset> python ...
+if os.environ.get("QML_MODE") == "vqc_tune":
+    base = json.loads(BENCH_PATH.read_text())
+    for label, description in DATASETS:
+        out = OUT_DIR / f"vqc_tuned_{label}.json"
+        if out.exists():
+            print(f"Skipping {label} (already tuned)")
+            continue
+        print(f"\n{description}", flush=True)
+        X, y = LOADERS[label]()
+        folds = make_folds(X, y)
+        lr_chk = run_classical("LR", folds)
+        diff = max(abs(a - b["auc"]) for a, b in zip(base[label]["LR"]["auc"]["values"], lr_chk))
+        if diff > 1e-9:
+            sys.exit(f"  Fold check FAILED for {label} (LR max diff {diff:.2e})")
+        t0 = time.time()
+        sc, chosen = run_vqc_tuned(folds)
+        res = {"VQC_tuned": _aggregate(sc), "chosen_layers_lr": chosen,
+               "grid": VQC_GRID, "time_sec": time.time() - t0, "fold_check_lr_max_diff": diff}
+        out.write_text(json.dumps(res, cls=_Enc, indent=1))
+        print(f"  VQC tuned AUC {res['VQC_tuned']['auc']['mean']:.3f} "
+              f"[untuned {base[label]['VQC']['auc']['mean']:.3f}]  chosen "
+              f"{Counter(map(tuple, chosen)).most_common(3)}  ({res['time_sec']/60:.0f} min)",
+              flush=True)
+    sys.exit(0)
 
 # ----- Patch mode (v3b): add decision-function RBF SVM and the min-max [0, pi] QSVM to an
 # existing v3 results file, on identical folds. Run with:  QML_MODE=patch python benchmark_colab_v3.py
