@@ -1316,7 +1316,7 @@ def build(R):
          "(archive.ics.uci.edu), UCSC Xena (xenabrowser.net) and CDC NHANES "
          "(wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/)."),
         ("Code availability", "Code and per-split results: github.com/sirajbb/qml-health-ready; "
-         "archived at Zenodo [new version DOI to be inserted]."),
+         "archived at Zenodo (release v3.0.0), doi:10.5281/zenodo.23572398."),
         ("Declaration of generative AI and AI-assisted technologies in the manuscript preparation "
          "process", "During the preparation of this work the authors used Claude (Anthropic) to "
          "assist with code development, code review and drafting of the manuscript. After using "
@@ -1387,7 +1387,8 @@ def build_cover_letter(mt_eq05, mt_eq02, shot_pen, R):
     para("We believe the work suits Computers in Biology and Medicine because it addresses how "
          "computational methods for biomedical data should be evaluated and reported, and it "
          "provides a fully reproducible benchmark that other groups can extend. All code and "
-         "per-split results are openly available on GitHub and archived at Zenodo. The analysis "
+         "per-split results are openly available on GitHub and archived at Zenodo "
+         "(doi:10.5281/zenodo.23572398). The analysis "
          "history, including corrections made after an internal review of an earlier version of "
          "our own pipeline, is reported in full in the supplementary material.")
     para("This manuscript is original, has not been published previously, and is not under "
