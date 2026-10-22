@@ -1,0 +1,11 @@
+{
+  "title": "QML-Health-READY benchmark: code and per-split results for \"Matched but Not Better: An Equivalence-Tested Benchmark of Quantum Machine Learning on Six Clinical Datasets and the QML-Health-READY Reporting Framework\"",
+  "upload_type": "software",
+  "description": "Benchmark code (benchmark_colab_v3.py), manuscript builder and the per-split results reported in the manuscript. Every number in the manuscript is regenerated from results/benchmark_results.json by build_manuscript.py. Data are public and downloaded by the scripts; no patient data are included. Earlier, superseded pipelines are kept in legacy_v1/ and legacy_v2/ for transparency.",
+  "creators": [
+    {"name": "B, Mohammed Siraj", "affiliation": "School of Engineering, St Aloysius (Deemed to be University), Mangalore, India", "orcid": "0009-0001-6943-5921"},
+    {"name": "S, Ruban", "affiliation": "School of Engineering, St Aloysius (Deemed to be University), Mangalore, India", "orcid": "0000-0001-7653-5130"}
+  ],
+  "license": "MIT",
+  "keywords": ["quantum machine learning", "quantum kernel", "clinical prediction", "equivalence testing", "benchmark", "reporting guideline"]
+}

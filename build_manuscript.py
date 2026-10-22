@@ -1394,6 +1394,11 @@ def build_cover_letter(mt_eq05, mt_eq02, shot_pen, R):
          "consideration elsewhere. Both authors have approved the submission. The authors declare "
          "no competing interests and received no specific funding. Generative AI assistance is "
          "declared in the manuscript in accordance with the journal’s policy.")
+    para("For transparency: two further studies by the same authors are in preparation. One "
+         "benchmarks quantum kernels on 38 other public clinical datasets to identify dataset "
+         "properties associated with the quantum–classical gap; the other studies quantum kernels "
+         "at 4 to 16 qubits on cancer transcriptomes. Both use different data and address different "
+         "questions, and neither reuses data, results, figures or text from this manuscript.")
     para("[If you post a preprint, add: “A preprint is available at <server and DOI>.” "
          "Otherwise delete this paragraph.]", action=True)
     para("Thank you for considering our manuscript.")
